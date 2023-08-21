@@ -24,6 +24,8 @@ import tensorflow_hub as hub
 
 from mediapipe.model_maker.python.core.data import dataset as ds
 from mediapipe.model_maker.python.core.tasks import classifier
+from mediapipe.model_maker.python.core.utils import hub_loader
+from mediapipe.model_maker.python.core.utils import loss_functions
 from mediapipe.model_maker.python.core.utils import metrics
 from mediapipe.model_maker.python.core.utils import model_util
 from mediapipe.model_maker.python.core.utils import quantization
@@ -51,18 +53,21 @@ def _validate(options: text_classifier_options.TextClassifierOptions):
   if options.model_options is None:
     return
 
-  if (isinstance(options.model_options, mo.AverageWordEmbeddingModelOptions) and
-      (options.supported_model !=
-       ms.SupportedModels.AVERAGE_WORD_EMBEDDING_CLASSIFIER)):
-    raise ValueError("Expected AVERAGE_WORD_EMBEDDING_CLASSIFIER,"
-                     f" got {options.supported_model}")
-  if isinstance(options.model_options, mo.BertModelOptions) and (
-      options.supported_model != ms.SupportedModels.MOBILEBERT_CLASSIFIER
-      and options.supported_model != ms.SupportedModels.EXBERT_CLASSIFIER
+  if isinstance(
+      options.model_options, mo.AverageWordEmbeddingModelOptions
+  ) and (
+      options.supported_model
+      != ms.SupportedModels.AVERAGE_WORD_EMBEDDING_CLASSIFIER
   ):
     raise ValueError(
-        "Expected a Bert Classifier(MobileBERT or EXBERT), got "
-        f"{options.supported_model}"
+        "Expected AVERAGE_WORD_EMBEDDING_CLASSIFIER,"
+        f" got {options.supported_model}"
+    )
+  if isinstance(options.model_options, mo.BertModelOptions) and (
+      not isinstance(options.supported_model.value(), ms.BertClassifierSpec)
+  ):
+    raise ValueError(
+        f"Expected a Bert Classifier, got {options.supported_model}"
     )
 
 
@@ -112,21 +117,16 @@ class TextClassifier(classifier.Classifier):
     if options.hparams is None:
       options.hparams = options.supported_model.value().hparams
 
-    if (
-        options.supported_model == ms.SupportedModels.MOBILEBERT_CLASSIFIER
-        or options.supported_model == ms.SupportedModels.EXBERT_CLASSIFIER
+    if isinstance(options.supported_model.value(), ms.BertClassifierSpec):
+      text_classifier = _BertClassifier.create_bert_classifier(
+          train_data, validation_data, options
+      )
+    elif isinstance(
+        options.supported_model.value(), ms.AverageWordEmbeddingClassifierSpec
     ):
-      text_classifier = (
-          _BertClassifier.create_bert_classifier(train_data, validation_data,
-                                                 options,
-                                                 train_data.label_names))
-    elif (options.supported_model ==
-          ms.SupportedModels.AVERAGE_WORD_EMBEDDING_CLASSIFIER):
-      text_classifier = (
-          _AverageWordEmbeddingClassifier
-          .create_average_word_embedding_classifier(train_data, validation_data,
-                                                    options,
-                                                    train_data.label_names))
+      text_classifier = _AverageWordEmbeddingClassifier.create_average_word_embedding_classifier(
+          train_data, validation_data, options
+      )
     else:
       raise ValueError(f"Unknown model {options.supported_model}")
 
@@ -166,28 +166,27 @@ class TextClassifier(classifier.Classifier):
     processed_data = self._text_preprocessor.preprocess(data)
     dataset = processed_data.gen_tf_dataset(batch_size, is_training=False)
 
-    additional_metrics = []
-    if desired_precisions and len(data.label_names) == 2:
-      for precision in desired_precisions:
-        additional_metrics.append(
-            metrics.BinarySparseRecallAtPrecision(
-                precision, name=f"recall_at_precision_{precision}"
-            )
-        )
-    if desired_recalls and len(data.label_names) == 2:
-      for recall in desired_recalls:
-        additional_metrics.append(
-            metrics.BinarySparsePrecisionAtRecall(
-                recall, name=f"precision_at_recall_{recall}"
-            )
-        )
-    metric_functions = self._metric_functions + additional_metrics
-    self._model.compile(
-        optimizer=self._optimizer,
-        loss=self._loss_function,
-        metrics=metric_functions,
+    with self._hparams.get_strategy().scope():
+      return self._model.evaluate(dataset)
+
+  def save_model(
+      self,
+      model_name: str = "saved_model",
+  ):
+    """Saves the model in SavedModel format.
+
+    For more information, see https://www.tensorflow.org/guide/saved_model.
+
+    Args:
+      model_name: Name of the saved model.
+    """
+    tf.io.gfile.makedirs(self._hparams.export_dir)
+    saved_model_file = os.path.join(self._hparams.export_dir, model_name)
+    self._model.save(
+        saved_model_file,
+        include_optimizer=False,
+        save_format="tf",
     )
-    return self._model.evaluate(dataset)
 
   def export_model(
       self,
@@ -204,12 +203,16 @@ class TextClassifier(classifier.Classifier):
         path is {self._hparams.export_dir}/{model_name}.
       quantization_config: The configuration for model quantization.
     """
+    tf.io.gfile.makedirs(self._hparams.export_dir)
     tflite_file = os.path.join(self._hparams.export_dir, model_name)
-    tf.io.gfile.makedirs(os.path.dirname(tflite_file))
     metadata_file = os.path.join(self._hparams.export_dir, "metadata.json")
 
-    tflite_model = model_util.convert_to_tflite(
-        model=self._model, quantization_config=quantization_config)
+    self.save_model(model_name="saved_model")
+    saved_model_file = os.path.join(self._hparams.export_dir, "saved_model")
+
+    tflite_model = model_util.convert_to_tflite_from_file(
+        saved_model_file, quantization_config=quantization_config
+    )
     vocab_filepath = os.path.join(tempfile.mkdtemp(), "vocab.txt")
     self._save_vocab(vocab_filepath)
 
@@ -255,16 +258,17 @@ class _AverageWordEmbeddingClassifier(TextClassifier):
 
   @classmethod
   def create_average_word_embedding_classifier(
-      cls, train_data: text_ds.Dataset, validation_data: text_ds.Dataset,
+      cls,
+      train_data: text_ds.Dataset,
+      validation_data: text_ds.Dataset,
       options: text_classifier_options.TextClassifierOptions,
-      label_names: Sequence[str]) -> "_AverageWordEmbeddingClassifier":
+  ) -> "_AverageWordEmbeddingClassifier":
     """Creates, trains, and returns an Average Word Embedding classifier.
 
     Args:
       train_data: Training data.
       validation_data: Validation data.
       options: Options for creating and training the text classifier.
-      label_names: Label names used in the data.
 
     Returns:
       An Average Word Embedding classifier.
@@ -369,29 +373,26 @@ class _BertClassifier(TextClassifier):
     self._hparams = hparams
     self._callbacks = model_util.get_default_callbacks(self._hparams.export_dir)
     self._model_options = model_options
-    with self._hparams.get_strategy().scope():
-      self._loss_function = tf.keras.losses.SparseCategoricalCrossentropy()
-      self._metric_functions = [
-          tf.keras.metrics.SparseCategoricalAccuracy(
-              "test_accuracy", dtype=tf.float32
-          ),
-          metrics.SparsePrecision(name="precision", dtype=tf.float32),
-          metrics.SparseRecall(name="recall", dtype=tf.float32),
-      ]
     self._text_preprocessor: preprocessor.BertClassifierPreprocessor = None
+    with self._hparams.get_strategy().scope():
+      self._loss_function = loss_functions.SparseFocalLoss(
+          self._hparams.gamma, self._num_classes
+      )
+      self._metric_functions = self._create_metrics()
 
   @classmethod
   def create_bert_classifier(
-      cls, train_data: text_ds.Dataset, validation_data: text_ds.Dataset,
+      cls,
+      train_data: text_ds.Dataset,
+      validation_data: text_ds.Dataset,
       options: text_classifier_options.TextClassifierOptions,
-      label_names: Sequence[str]) -> "_BertClassifier":
+  ) -> "_BertClassifier":
     """Creates, trains, and returns a BERT-based classifier.
 
     Args:
       train_data: Training data.
       validation_data: Validation data.
       options: Options for creating and training the text classifier.
-      label_names: Label names used in the data.
 
     Returns:
       A BERT-based classifier.
@@ -434,10 +435,60 @@ class _BertClassifier(TextClassifier):
     self._text_preprocessor = preprocessor.BertClassifierPreprocessor(
         seq_len=self._model_options.seq_len,
         do_lower_case=self._model_spec.do_lower_case,
-        uri=self._model_spec.downloaded_files.get_path(),
+        uri=self._model_spec.get_path(),
+        model_name=self._model_spec.name,
     )
-    return (self._text_preprocessor.preprocess(train_data),
-            self._text_preprocessor.preprocess(validation_data))
+    return (
+        self._text_preprocessor.preprocess(train_data),
+        self._text_preprocessor.preprocess(validation_data),
+    )
+
+  def _create_metrics(self):
+    """Creates metrics for training and evaluation.
+
+    The default metrics are accuracy, precision, and recall.
+
+    For binary classification tasks only (num_classes=2):
+      Users can configure PrecisionAtRecall and RecallAtPrecision metrics using
+      the desired_presisions and desired_recalls fields in BertHParams.
+
+    Returns:
+      A list of tf.keras.Metric subclasses which can be used with model.compile
+    """
+    metric_functions = [
+        tf.keras.metrics.SparseCategoricalAccuracy(
+            "accuracy", dtype=tf.float32
+        ),
+        metrics.SparsePrecision(name="precision", dtype=tf.float32),
+        metrics.SparseRecall(name="recall", dtype=tf.float32),
+    ]
+    if self._num_classes == 2:
+      if self._hparams.desired_precisions:
+        for desired_precision in self._hparams.desired_precisions:
+          metric_functions.append(
+              metrics.BinarySparseRecallAtPrecision(
+                  desired_precision,
+                  name=f"recall_at_precision_{desired_precision}",
+                  num_thresholds=1000,
+              )
+          )
+      if self._hparams.desired_recalls:
+        for desired_recall in self._hparams.desired_recalls:
+          metric_functions.append(
+              metrics.BinarySparseRecallAtPrecision(
+                  desired_recall,
+                  name=f"precision_at_recall_{desired_recall}",
+                  num_thresholds=1000,
+              )
+          )
+    else:
+      if self._hparams.desired_precisions or self._hparams.desired_recalls:
+        raise ValueError(
+            "desired_recalls and desired_precisions parameters are binary"
+            " metrics and not supported for num_classes > 2. Found"
+            f" num_classes: {self._num_classes}"
+        )
+    return metric_functions
 
   def _create_model(self):
     """Creates a BERT-based classifier model.
@@ -447,30 +498,58 @@ class _BertClassifier(TextClassifier):
     """
     encoder_inputs = dict(
         input_word_ids=tf.keras.layers.Input(
-            shape=(self._model_options.seq_len,), dtype=tf.int32),
+            shape=(self._model_options.seq_len,),
+            dtype=tf.int32,
+            name="input_word_ids",
+        ),
         input_mask=tf.keras.layers.Input(
-            shape=(self._model_options.seq_len,), dtype=tf.int32),
+            shape=(self._model_options.seq_len,),
+            dtype=tf.int32,
+            name="input_mask",
+        ),
         input_type_ids=tf.keras.layers.Input(
-            shape=(self._model_options.seq_len,), dtype=tf.int32),
+            shape=(self._model_options.seq_len,),
+            dtype=tf.int32,
+            name="input_type_ids",
+        ),
     )
-    encoder = hub.KerasLayer(
-        self._model_spec.downloaded_files.get_path(),
-        trainable=self._model_options.do_fine_tuning,
-    )
-    encoder_outputs = encoder(encoder_inputs)
-    pooled_output = encoder_outputs["pooled_output"]
+    if self._model_spec.is_tf2:
+      encoder = hub.KerasLayer(
+          self._model_spec.get_path(),
+          trainable=self._model_options.do_fine_tuning,
+          load_options=tf.saved_model.LoadOptions(
+              experimental_io_device="/job:localhost"
+          ),
+      )
+      encoder_outputs = encoder(encoder_inputs)
+      pooled_output = encoder_outputs["pooled_output"]
+    else:
+      renamed_inputs = dict(
+          input_ids=encoder_inputs["input_word_ids"],
+          input_mask=encoder_inputs["input_mask"],
+          segment_ids=encoder_inputs["input_type_ids"],
+      )
+      encoder = hub_loader.HubKerasLayerV1V2(
+          self._model_spec.get_path(),
+          signature="tokens",
+          output_key="pooled_output",
+          trainable=self._model_options.do_fine_tuning,
+      )
+      pooled_output = encoder(renamed_inputs)
 
     output = tf.keras.layers.Dropout(rate=self._model_options.dropout_rate)(
-        pooled_output)
+        pooled_output
+    )
     initializer = tf.keras.initializers.TruncatedNormal(
-        stddev=self._INITIALIZER_RANGE)
+        stddev=self._INITIALIZER_RANGE
+    )
     output = tf.keras.layers.Dense(
         self._num_classes,
         kernel_initializer=initializer,
         name="output",
         activation="softmax",
-        dtype=tf.float32)(
-            output)
+        dtype=tf.float32,
+    )(output)
     self._model = tf.keras.Model(inputs=encoder_inputs, outputs=output)
 
   def _create_optimizer(self, train_data: text_ds.Dataset):
@@ -493,16 +572,21 @@ class _BertClassifier(TextClassifier):
     lr_schedule = tf.keras.optimizers.schedules.PolynomialDecay(
         initial_learning_rate=initial_lr,
         decay_steps=total_steps,
-        end_learning_rate=0.0,
-        power=1.0)
+        end_learning_rate=self._hparams.end_learning_rate,
+        power=1.0,
+    )
     if warmup_steps:
       lr_schedule = model_util.WarmUp(
           initial_learning_rate=initial_lr,
           decay_schedule_fn=lr_schedule,
-          warmup_steps=warmup_steps)
+          warmup_steps=warmup_steps,
+      )
     if self._hparams.optimizer == hp.BertOptimizer.ADAMW:
       self._optimizer = tf.keras.optimizers.experimental.AdamW(
-          lr_schedule, weight_decay=0.01, epsilon=1e-6, global_clipnorm=1.0
+          lr_schedule,
+          weight_decay=self._hparams.weight_decay,
+          epsilon=1e-6,
+          global_clipnorm=1.0,
       )
       self._optimizer.exclude_from_weight_decay(
           var_names=["LayerNorm", "layer_norm", "bias"]
@@ -510,7 +594,7 @@ class _BertClassifier(TextClassifier):
     elif self._hparams.optimizer == hp.BertOptimizer.LAMB:
       self._optimizer = tfa_optimizers.LAMB(
           lr_schedule,
-          weight_decay_rate=0.01,
+          weight_decay_rate=self._hparams.weight_decay,
           epsilon=1e-6,
           exclude_from_weight_decay=["LayerNorm", "layer_norm", "bias"],
           global_clipnorm=1.0,

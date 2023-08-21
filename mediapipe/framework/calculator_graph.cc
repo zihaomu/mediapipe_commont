@@ -25,6 +25,7 @@
 
 #include "absl/container/fixed_array.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/log/log.h"
 #include "absl/memory/memory.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
@@ -74,6 +75,11 @@ namespace {
 // threshold.
 constexpr int kMaxNumAccumulatedErrors = 1000;
 constexpr char kApplicationThreadExecutorType[] = "ApplicationThreadExecutor";
+
+// Do not log status payloads, but do include stack traces.
+constexpr absl::StatusToStringMode kStatusLogFlags =
+    absl::StatusToStringMode::kWithEverything &
+    (~absl::StatusToStringMode::kWithPayload);
 
 }  // namespace
 
@@ -382,6 +388,7 @@ absl::Status CalculatorGraph::InitializeDefaultExecutor(
         "", std::make_shared<internal::DelegatingExecutor>(
                 std::bind(&internal::Scheduler::AddApplicationThreadTask,
                           &scheduler_, std::placeholders::_1))));
+    VLOG(1) << "Using default executor and application thread.";
     return absl::OkStatus();
   }
 
@@ -401,6 +408,8 @@ absl::Status CalculatorGraph::InitializeDefaultExecutor(
   }
   MP_RETURN_IF_ERROR(
       CreateDefaultThreadPool(default_executor_options, num_threads));
+  VLOG(1) << absl::StrCat("Using default executor with num_threads: ",
+                          num_threads);
   return absl::OkStatus();
 }
 
@@ -707,7 +716,7 @@ absl::Status CalculatorGraph::PrepareForRun(
   absl::Status error_status;
   if (has_error_) {
     GetCombinedErrors(&error_status);
-    LOG(ERROR) << error_status;
+    LOG(ERROR) << error_status.ToString(kStatusLogFlags);
     return error_status;
   }
 
@@ -786,7 +795,7 @@ absl::Status CalculatorGraph::PrepareForRun(
   }
 
   if (GetCombinedErrors(&error_status)) {
-    LOG(ERROR) << error_status;
+    LOG(ERROR) << error_status.ToString(kStatusLogFlags);
     CleanupAfterRun(&error_status);
     return error_status;
   }
@@ -850,7 +859,7 @@ absl::Status CalculatorGraph::WaitUntilIdle() {
   VLOG(2) << "Scheduler idle.";
   absl::Status status = absl::OkStatus();
   if (GetCombinedErrors(&status)) {
-    LOG(ERROR) << status;
+    LOG(ERROR) << status.ToString(kStatusLogFlags);
   }
   return status;
 }
@@ -1052,8 +1061,7 @@ void CalculatorGraph::RecordError(const absl::Status& error) {
 }
 
 bool CalculatorGraph::GetCombinedErrors(absl::Status* error_status) {
-  return GetCombinedErrors("CalculatorGraph::Run() failed in Run: ",
-                           error_status);
+  return GetCombinedErrors("CalculatorGraph::Run() failed: ", error_status);
 }
 
 bool CalculatorGraph::GetCombinedErrors(const std::string& error_prefix,
