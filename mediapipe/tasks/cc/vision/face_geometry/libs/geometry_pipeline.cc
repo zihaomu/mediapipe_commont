@@ -40,6 +40,7 @@
 namespace mediapipe::tasks::vision::face_geometry {
 namespace {
 
+// 截屏面相机投影矩阵。
 struct PerspectiveCameraFrustum {
   // NOTE: all arguments must be validated prior to calling this constructor.
   PerspectiveCameraFrustum(const proto::PerspectiveCamera& perspective_camera,
@@ -69,11 +70,12 @@ struct PerspectiveCameraFrustum {
   float far;
 };
 
+// 屏幕到度量空间的转换
 class ScreenToMetricSpaceConverter {
  public:
   ScreenToMetricSpaceConverter(
       proto::OriginPointLocation origin_point_location,  //
-      proto::InputSource input_source,                   //
+      proto::InputSource input_source,                   // What is this argument?
       Eigen::Matrix3Xf&& canonical_metric_landmarks,     //
       Eigen::VectorXf&& landmark_weights,                //
       std::unique_ptr<ProcrustesSolver> procrustes_solver)
@@ -348,7 +350,8 @@ class GeometryPipelineImpl : public GeometryPipeline {
       // Copy the canonical face mesh as the face geometry mesh.
       mutable_mesh->CopyFrom(canonical_mesh_);
       // Replace XYZ vertex mesh coordinates with the metric landmark positions.
-      for (int i = 0; i < canonical_mesh_num_vertices_; ++i) {
+      for (int i = 0; i < canonical_mesh_num_vertices_; ++i) 
+      {
         uint32_t vertex_buffer_offset = canonical_mesh_vertex_size_ * i +
                                         canonical_mesh_vertex_position_offset_;
 
@@ -381,7 +384,8 @@ class GeometryPipelineImpl : public GeometryPipeline {
     }
 
     float max_sq_dist = 0.f;
-    for (const auto& landmark : screen_landmarks.landmark()) {
+    for (const auto& landmark : screen_landmarks.landmark()) 
+    {
       const float d_x = landmark.x() - mean_x;
       const float d_y = landmark.y() - mean_y;
       max_sq_dist = std::max(max_sq_dist, d_x * d_x + d_y * d_y);

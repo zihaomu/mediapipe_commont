@@ -14,6 +14,10 @@
 
 #include <memory>
 
+/*
+分割平滑的具体做法：pre mask + curr_mask = output mask
+*/
+
 #include "mediapipe/calculators/image/segmentation_smoothing_calculator.pb.h"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/calculator_runner.h"

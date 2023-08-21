@@ -33,7 +33,7 @@ mediapipe_simple_subgraph(
     graph = "face_geometry_from_detection.pbtxt",
     register_as = "FaceGeometryFromDetection",
     deps = [
-        ":geometry_pipeline_calculator",
+        ":geometry_pipeline_calculator", # 几何计算pipeline
         "//mediapipe/calculators/core:begin_loop_calculator",
         "//mediapipe/calculators/core:end_loop_calculator",
         "//mediapipe/calculators/util:detection_to_landmarks_calculator",

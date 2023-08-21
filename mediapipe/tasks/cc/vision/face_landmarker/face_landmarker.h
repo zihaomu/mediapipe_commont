@@ -33,6 +33,7 @@ namespace tasks {
 namespace vision {
 namespace face_landmarker {
 
+// MOO_COMMENT: 这应该是人脸关键点的主类。
 struct FaceLandmarkerOptions {
   // Base options for configuring MediaPipe Tasks library, such as specifying
   // the TfLite model bundle file with metadata, accelerator options, op

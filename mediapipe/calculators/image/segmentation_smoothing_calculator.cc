@@ -80,6 +80,8 @@ enum { ATTRIB_VERTEX, ATTRIB_TEXTURE_POSITION, NUM_ATTRIBUTES };
 //    }
 //  }
 //
+
+// MOO_COMMENT: 这里是实际平滑的执行程序
 class SegmentationSmoothingCalculator : public CalculatorBase {
  public:
   SegmentationSmoothingCalculator() = default;
@@ -205,12 +207,15 @@ absl::Status SegmentationSmoothingCalculator::RenderCpu(CalculatorContext* cc) {
   RET_CHECK_EQ(current_mat->cols, previous_mat->cols);
 
   // Setup destination image.
+  // 先拷贝输出frame
   auto output_frame = std::make_shared<ImageFrame>(
       current_frame.image_format(), current_mat->cols, current_mat->rows);
   cv::Mat output_mat = mediapipe::formats::MatView(output_frame.get());
   output_mat.setTo(cv::Scalar(0));
 
   // Blending function.
+  // 这个是什么写法？？看起来大量的在mediapipe中使用
+  // lambda 表达式，实现函数的方便调用。
   const auto blending_fn = [&](const float prev_mask_value,
                                const float new_mask_value) {
     /*
@@ -234,11 +239,13 @@ absl::Status SegmentationSmoothingCalculator::RenderCpu(CalculatorContext* cc) {
         1.0f -
         std::min(1.0f, x * (c1 + x * (c2 + x * (c3 + x * (c4 + x * c5)))));
 
+    // 这里的new_mask_value是current mask
     return new_mask_value + (prev_mask_value - new_mask_value) *
                                 (uncertainty * combine_with_previous_ratio_);
   };
 
   // Write directly to the first channel of output.
+  // 是逐个像素点做平滑，这样速度是不是有点慢？？
   for (int i = 0; i < output_mat.rows; ++i) {
     float* out_ptr = output_mat.ptr<float>(i);
     const float* curr_ptr = current_mat->ptr<float>(i);

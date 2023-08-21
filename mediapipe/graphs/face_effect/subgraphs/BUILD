@@ -30,17 +30,18 @@ mediapipe_simple_subgraph(
     ],
 )
 
+# 问题：这个模块没有用关键点提取？只是使用了五个关键的平滑？？
 mediapipe_simple_subgraph(
-    name = "single_face_geometry_from_detection_gpu",
+    name = "single_face_geometry_from_detection_gpu", # GPU渲染需要这个。
     graph = "single_face_geometry_from_detection_gpu.pbtxt",
     register_as = "SingleFaceGeometryFromDetectionGpu",
     deps = [
-        ":face_landmarks_smoothing",
+        ":face_landmarks_smoothing", # 人脸关键点平滑
         "//mediapipe/calculators/core:concatenate_detection_vector_calculator",
         "//mediapipe/calculators/core:split_vector_calculator",
         "//mediapipe/calculators/image:image_properties_calculator",
-        "//mediapipe/modules/face_detection:face_detection_short_range_gpu",
-        "//mediapipe/modules/face_geometry:face_geometry_from_detection",
+        "//mediapipe/modules/face_detection:face_detection_short_range_gpu", # 人脸检测
+        "//mediapipe/modules/face_geometry:face_geometry_from_detection",    # 
     ],
 )
 
