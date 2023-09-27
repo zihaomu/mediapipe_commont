@@ -18,6 +18,10 @@ limitations under the License.
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Classifier options for MediaPipe C classification Tasks.
 struct ClassifierOptions {
   // The locale to use for display names specified through the TFLite Model
@@ -43,9 +47,13 @@ struct ClassifierOptions {
   // The denylist of category names. If non-empty, detection results whose
   // category name is in this set will be filtered out. Duplicate or unknown
   // category names are ignored. Mutually exclusive with category_allowlist.
-  char** category_denylist = {};
+  char** category_denylist;
   // The number of elements in the category denylist.
   uint32_t category_denylist_count;
 };
+
+#ifdef __cplusplus
+}  // extern C
+#endif
 
 #endif  // MEDIAPIPE_TASKS_C_COMPONENTS_PROCESSORS_CLASSIFIER_OPTIONS_H_

@@ -20,3 +20,13 @@ cc_library(
     name = "classifier_options",
     hdrs = ["classifier_options.h"],
 )
+
+cc_library(
+    name = "classifier_options_converter",
+    srcs = ["classifier_options_converter.cc"],
+    hdrs = ["classifier_options_converter.h"],
+    deps = [
+        ":classifier_options",
+        "//mediapipe/tasks/cc/components/processors:classifier_options",
+    ],
+)

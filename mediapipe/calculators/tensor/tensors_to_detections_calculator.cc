@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "absl/log/absl_log.h"
 #include "absl/strings/str_format.h"
 #include "absl/types/span.h"
 #include "mediapipe/calculators/tensor/tensors_to_detections_calculator.pb.h"
@@ -83,7 +84,7 @@ void ConvertRawValuesToAnchors(const float* raw_anchors, int num_boxes,
 
 void ConvertAnchorsToRawValues(const std::vector<Anchor>& anchors,
                                int num_boxes, float* raw_anchors) {
-  CHECK_EQ(anchors.size(), num_boxes);
+  ABSL_CHECK_EQ(anchors.size(), num_boxes);
   int box = 0;
   for (const auto& anchor : anchors) {
     raw_anchors[box * kNumCoordsPerBox + 0] = anchor.y_center();
@@ -331,7 +332,7 @@ absl::Status TensorsToDetectionsCalculator::Process(CalculatorContext* cc)
     } else if (status.code() == absl::StatusCode::kFailedPrecondition) {
       // For initialization error because of hardware limitation, fallback to
       // CPU processing.
-      LOG(WARNING) << status.message();
+      ABSL_LOG(WARNING) << status.message();
     } else {
       // For other error, let the error propagates.
       return status;
@@ -671,7 +672,7 @@ absl::Status TensorsToDetectionsCalculator::ProcessGPU(
                                          output_detections));
 
 #else
-  LOG(ERROR) << "GPU input on non-Android not supported yet.";
+  ABSL_LOG(ERROR) << "GPU input on non-Android not supported yet.";
 #endif  // !defined(MEDIAPIPE_DISABLE_GL_COMPUTE)
   return absl::OkStatus();
 }
@@ -706,18 +707,18 @@ absl::Status TensorsToDetectionsCalculator::LoadOptions(CalculatorContext* cc) {
   num_boxes_ = options_.num_boxes();
   num_coords_ = options_.num_coords();
   box_output_format_ = GetBoxFormat(options_);
-  CHECK_NE(options_.max_results(), 0)
+  ABSL_CHECK_NE(options_.max_results(), 0)
       << "The maximum number of the top-scored detection results must be "
          "non-zero.";
   max_results_ = options_.max_results();
 
   // Currently only support 2D when num_values_per_keypoint equals to 2.
-  CHECK_EQ(options_.num_values_per_keypoint(), 2);
+  ABSL_CHECK_EQ(options_.num_values_per_keypoint(), 2);
 
   // Check if the output size is equal to the requested boxes and keypoints.
-  CHECK_EQ(options_.num_keypoints() * options_.num_values_per_keypoint() +
-               kNumCoordsPerBox,
-           num_coords_);
+  ABSL_CHECK_EQ(options_.num_keypoints() * options_.num_values_per_keypoint() +
+                    kNumCoordsPerBox,
+                num_coords_);
 
   if (kSideInIgnoreClasses(cc).IsConnected()) {
     RET_CHECK(!kSideInIgnoreClasses(cc).IsEmpty());
@@ -1158,11 +1159,12 @@ void main() {
     }
     // TODO support better filtering.
     if (class_index_set_.is_allowlist) {
-      CHECK_EQ(class_index_set_.values.size(),
-               IsClassIndexAllowed(0) ? num_classes_ : num_classes_ - 1)
+      ABSL_CHECK_EQ(class_index_set_.values.size(),
+                    IsClassIndexAllowed(0) ? num_classes_ : num_classes_ - 1)
           << "Only all classes  >= class 0  or  >= class 1";
     } else {
-      CHECK_EQ(class_index_set_.values.size(), IsClassIndexAllowed(0) ? 0 : 1)
+      ABSL_CHECK_EQ(class_index_set_.values.size(),
+                    IsClassIndexAllowed(0) ? 0 : 1)
           << "Only ignore class 0 is allowed";
     }
 
@@ -1383,11 +1385,12 @@ kernel void scoreKernel(
 
   // TODO support better filtering.
   if (class_index_set_.is_allowlist) {
-    CHECK_EQ(class_index_set_.values.size(),
-             IsClassIndexAllowed(0) ? num_classes_ : num_classes_ - 1)
+    ABSL_CHECK_EQ(class_index_set_.values.size(),
+                  IsClassIndexAllowed(0) ? num_classes_ : num_classes_ - 1)
         << "Only all classes  >= class 0  or  >= class 1";
   } else {
-    CHECK_EQ(class_index_set_.values.size(), IsClassIndexAllowed(0) ? 0 : 1)
+    ABSL_CHECK_EQ(class_index_set_.values.size(),
+                  IsClassIndexAllowed(0) ? 0 : 1)
         << "Only ignore class 0 is allowed";
   }
 

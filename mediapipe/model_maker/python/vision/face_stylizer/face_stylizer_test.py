@@ -24,11 +24,22 @@ from mediapipe.tasks.python.test import test_utils
 
 class FaceStylizerTest(tf.test.TestCase):
 
-  def _load_data(self):
-    """Loads training dataset."""
-    input_data_dir = test_utils.get_test_data_path('input/style')
+  def _create_training_dataset(self):
+    """Creates training dataset."""
+    input_style_image_file = test_utils.get_test_data_path(
+        'input/style/cartoon/cartoon.jpg'
+    )
 
-    data = face_stylizer.Dataset.from_folder(dirname=input_data_dir)
+    data = face_stylizer.Dataset.from_image(filename=input_style_image_file)
+    return data
+
+  def _create_eval_dataset(self):
+    """Create evaluation dataset."""
+    input_test_image_file = test_utils.get_test_data_path(
+        'input/raw/face/portrait.jpg'
+    )
+
+    data = face_stylizer.Dataset.from_image(filename=input_test_image_file)
     return data
 
   def _evaluate_saved_model(self, model: face_stylizer.FaceStylizer):
@@ -41,7 +52,8 @@ class FaceStylizerTest(tf.test.TestCase):
 
   def setUp(self):
     super().setUp()
-    self._train_data = self._load_data()
+    self._train_data = self._create_training_dataset()
+    self._eval_data = self._create_eval_dataset()
 
   def test_finetuning_face_stylizer_with_single_input_style_image(self):
     with self.test_session(use_gpu=True):
@@ -53,6 +65,21 @@ class FaceStylizerTest(tf.test.TestCase):
           train_data=self._train_data, options=face_stylizer_options
       )
       self._evaluate_saved_model(model)
+
+  def test_evaluate_face_stylizer(self):
+    with self.test_session(use_gpu=True):
+      face_stylizer_options = face_stylizer.FaceStylizerOptions(
+          model=face_stylizer.SupportedModels.BLAZE_FACE_STYLIZER_256,
+          hparams=face_stylizer.HParams(epochs=1),
+      )
+      model = face_stylizer.FaceStylizer.create(
+          train_data=self._train_data, options=face_stylizer_options
+      )
+      eval_output = model.stylize(self._eval_data)
+      self.assertLen(eval_output, 1)
+      eval_output_data = eval_output.gen_tf_dataset()
+      iterator = iter(eval_output_data)
+      self.assertEqual(iterator.get_next().shape, (1, 256, 256, 3))
 
   def test_export_face_stylizer_tflite_model(self):
     with self.test_session(use_gpu=True):

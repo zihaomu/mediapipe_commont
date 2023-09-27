@@ -58,7 +58,7 @@ const DEFAULT_CATEGORY_INDEX = -1;
 export class HandLandmarker extends VisionTaskRunner {
   private landmarks: NormalizedLandmark[][] = [];
   private worldLandmarks: Landmark[][] = [];
-  private handednesses: Category[][] = [];
+  private handedness: Category[][] = [];
 
   private readonly options: HandLandmarkerGraphOptions;
   private readonly handLandmarksDetectorGraphOptions:
@@ -68,12 +68,15 @@ export class HandLandmarker extends VisionTaskRunner {
   /**
    * An array containing the pairs of hand landmark indices to be rendered with
    * connections.
+   * @export
+   * @nocollapse
    */
   static HAND_CONNECTIONS = HAND_CONNECTIONS;
 
   /**
    * Initializes the Wasm runtime and creates a new `HandLandmarker` from the
    * provided options.
+   * @export
    * @param wasmFileset A configuration object that provides the location of the
    *     Wasm binary and its loader.
    * @param handLandmarkerOptions The options for the HandLandmarker.
@@ -90,6 +93,7 @@ export class HandLandmarker extends VisionTaskRunner {
   /**
    * Initializes the Wasm runtime and creates a new `HandLandmarker` based on
    * the provided model asset buffer.
+   * @export
    * @param wasmFileset A configuration object that provides the location of the
    *     Wasm binary and its loader.
    * @param modelAssetBuffer A binary representation of the model.
@@ -104,6 +108,7 @@ export class HandLandmarker extends VisionTaskRunner {
   /**
    * Initializes the Wasm runtime and creates a new `HandLandmarker` based on
    * the path to the model asset.
+   * @export
    * @param wasmFileset A configuration object that provides the location of the
    *     Wasm binary and its loader.
    * @param modelAssetPath The path to the model asset.
@@ -150,6 +155,7 @@ export class HandLandmarker extends VisionTaskRunner {
    * You can reset an option back to its default value by explicitly setting it
    * to `undefined`.
    *
+   * @export
    * @param options The options for the hand landmarker.
    */
   override setOptions(options: HandLandmarkerOptions): Promise<void> {
@@ -181,6 +187,7 @@ export class HandLandmarker extends VisionTaskRunner {
    * synchronously for the response. Only use this method when the
    * HandLandmarker is created with running mode `image`.
    *
+   * @export
    * @param image An image to process.
    * @param imageProcessingOptions the `ImageProcessingOptions` specifying how
    *    to process the input image before running inference.
@@ -198,6 +205,7 @@ export class HandLandmarker extends VisionTaskRunner {
    * synchronously for the response. Only use this method when the
    * HandLandmarker is created with running mode `video`.
    *
+   * @export
    * @param videoFrame A video frame to process.
    * @param timestamp The timestamp of the current frame, in ms.
    * @param imageProcessingOptions the `ImageProcessingOptions` specifying how
@@ -215,14 +223,15 @@ export class HandLandmarker extends VisionTaskRunner {
   private resetResults(): void {
     this.landmarks = [];
     this.worldLandmarks = [];
-    this.handednesses = [];
+    this.handedness = [];
   }
 
   private processResults(): HandLandmarkerResult {
     return {
       landmarks: this.landmarks,
       worldLandmarks: this.worldLandmarks,
-      handednesses: this.handednesses
+      handednesses: this.handedness,
+      handedness: this.handedness,
     };
   }
 
@@ -268,7 +277,7 @@ export class HandLandmarker extends VisionTaskRunner {
    * Converts raw data into a world landmark, and adds it to our worldLandmarks
    * list.
    */
-  private adddJsWorldLandmarks(data: Uint8Array[]): void {
+  private addJsWorldLandmarks(data: Uint8Array[]): void {
     for (const binaryProto of data) {
       const handWorldLandmarksProto =
           LandmarkList.deserializeBinary(binaryProto);
@@ -313,7 +322,7 @@ export class HandLandmarker extends VisionTaskRunner {
 
     this.graphRunner.attachProtoVectorListener(
         WORLD_LANDMARKS_STREAM, (binaryProto, timestamp) => {
-          this.adddJsWorldLandmarks(binaryProto);
+          this.addJsWorldLandmarks(binaryProto);
           this.setLatestOutputTimestamp(timestamp);
         });
     this.graphRunner.attachEmptyPacketListener(
@@ -323,7 +332,7 @@ export class HandLandmarker extends VisionTaskRunner {
 
     this.graphRunner.attachProtoVectorListener(
         HANDEDNESS_STREAM, (binaryProto, timestamp) => {
-          this.handednesses.push(...this.toJsCategories(binaryProto));
+          this.handedness.push(...this.toJsCategories(binaryProto));
           this.setLatestOutputTimestamp(timestamp);
         });
     this.graphRunner.attachEmptyPacketListener(

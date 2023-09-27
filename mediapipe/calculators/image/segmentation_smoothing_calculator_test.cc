@@ -18,6 +18,7 @@
 分割平滑的具体做法：pre mask + curr_mask = output mask
 */
 
+#include "absl/log/absl_log.h"
 #include "mediapipe/calculators/image/segmentation_smoothing_calculator.pb.h"
 #include "mediapipe/framework/calculator_framework.h"
 #include "mediapipe/framework/calculator_runner.h"
@@ -173,7 +174,7 @@ void RunTest(bool use_gpu, float mix_ratio, cv::Mat& test_result) {
       }
     }
   } else {
-    LOG(ERROR) << "invalid ratio";
+    ABSL_LOG(ERROR) << "invalid ratio";
   }
 }
 

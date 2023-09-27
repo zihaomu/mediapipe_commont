@@ -44,6 +44,13 @@ android_library(
     ],
 )
 
+# Expose the java source files for building mediapipe tasks vision per task AAR.
+filegroup(
+    name = "core_java_src",
+    srcs = glob(["core/**/*.java"]),
+    visibility = ["//mediapipe/tasks/java/com/google/mediapipe/tasks/vision:__subpackages__"],
+)
+
 # The native library of all MediaPipe vision tasks.
 cc_binary(
     name = "libmediapipe_tasks_vision_jni.so",
@@ -294,6 +301,13 @@ android_library(
     ],
 )
 
+# Expose the java source files for building mediapipe tasks vision per task AAR.
+filegroup(
+    name = "image_segmenter_java_src",
+    srcs = glob(["imagesegmenter/**/*.java"]),
+    visibility = ["//mediapipe/tasks/java/com/google/mediapipe/tasks/vision:__subpackages__"],
+)
+
 android_library(
     name = "interactivesegmenter",
     srcs = [
@@ -409,10 +423,20 @@ android_library(
     ],
 )
 
+# Expose the java source files for building mediapipe tasks vision per task AAR.
+filegroup(
+    name = "face_landmarker_java_src",
+    srcs = glob(["facelandmarker/**/*.java"]),
+    visibility = ["//mediapipe/tasks/java/com/google/mediapipe/tasks/vision:__subpackages__"],
+)
+
 load("//mediapipe/tasks/java/com/google/mediapipe/tasks:mediapipe_tasks_aar.bzl", "mediapipe_tasks_vision_aar")
 
 mediapipe_tasks_vision_aar(
     name = "tasks_vision",
-    srcs = glob(["**/*.java"]),
+    srcs = glob(
+        ["**/*.java"],
+        exclude = ["imagegenerator/**"],
+    ),
     native_library = ":libmediapipe_tasks_vision_jni_lib",
 )

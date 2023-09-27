@@ -104,7 +104,7 @@ cc_library(
     srcs = ["deleting_file.cc"],
     hdrs = ["deleting_file.h"],
     deps = [
-        "//mediapipe/framework/port:logging",
+        "@com_google_absl//absl/log:absl_log",
     ],
 )
 
@@ -119,6 +119,7 @@ cc_library(
         "//mediapipe/framework/port:logging",
         "//mediapipe/framework/port:ret_check",
         "//mediapipe/framework/port:status",
+        "@com_google_absl//absl/log:absl_check",
         "@eigen_archive//:eigen3",
     ],
 )
@@ -155,11 +156,12 @@ cc_library(
         "//mediapipe/framework/port:aligned_malloc_and_free",
         "//mediapipe/framework/port:core_proto",
         "//mediapipe/framework/port:integral_types",
-        "//mediapipe/framework/port:logging",
         "//mediapipe/framework/port:source_location",
         "//mediapipe/framework/tool:type_util",
         "@com_google_absl//absl/base",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
     ] + select({
@@ -206,7 +208,6 @@ cc_library(
         "//mediapipe/framework/formats/annotation:locus_cc_proto",
         "//mediapipe/framework/formats/annotation:rasterization_cc_proto",
         "//mediapipe/framework/port:integral_types",
-        "//mediapipe/framework/port:logging",
         "//mediapipe/framework/port:point",
         "//mediapipe/framework/port:rectangle",
         "//mediapipe/framework/port:ret_check",
@@ -214,6 +215,8 @@ cc_library(
         "//mediapipe/framework/port:statusor",
         "//mediapipe/framework/tool:status_util",
         "@com_google_absl//absl/base:core_headers",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/strings",
         "@com_google_protobuf//:protobuf",
@@ -234,6 +237,7 @@ cc_library(
         ":location",
         "//mediapipe/framework/formats/annotation:rasterization_cc_proto",
         "//mediapipe/framework/port:opencv_imgproc",
+        "@com_google_absl//absl/log:absl_log",
     ],
     alwayslink = 1,
 )
@@ -339,6 +343,7 @@ cc_library(
         "//mediapipe/framework/port:logging",
         "//mediapipe/gpu:gpu_buffer",
         "//mediapipe/gpu:gpu_buffer_format",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/synchronization",
     ] + select({
         "//conditions:default": [
@@ -363,6 +368,7 @@ cc_library(
         ":image_frame_pool",
         "//mediapipe/framework:port",
         "//mediapipe/framework/port:logging",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/synchronization",
     ] + select({
@@ -400,6 +406,7 @@ cc_library(
         "//mediapipe/framework/port:logging",
         "//mediapipe/framework/port:opencv_core",
         "//mediapipe/framework/port:statusor",
+        "@com_google_absl//absl/log:absl_check",
     ],
 )
 
@@ -485,8 +492,9 @@ cc_library(
     }),
     deps = [
         "//mediapipe/framework:port",
-        "//mediapipe/framework/port:logging",
         "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/log:absl_check",
+        "@com_google_absl//absl/log:absl_log",
         "@com_google_absl//absl/memory",
         "@com_google_absl//absl/synchronization",
     ] + select({
@@ -520,8 +528,24 @@ cc_library(
     hdrs = ["frame_buffer.h"],
     deps = [
         "//mediapipe/framework/port:integral_types",
-        "@com_google_absl//absl/log:check",
+        "@com_google_absl//absl/log:absl_check",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
     ],
+)
+
+mediapipe_proto_library(
+    name = "body_rig_proto",
+    srcs = ["body_rig.proto"],
+)
+
+mediapipe_register_type(
+    base_name = "body_rig",
+    include_headers = ["mediapipe/framework/formats/body_rig.pb.h"],
+    types = [
+        "::mediapipe::Joint",
+        "::mediapipe::JointList",
+        "::std::vector<::mediapipe::JointList>",
+    ],
+    deps = [":body_rig_cc_proto"],
 )

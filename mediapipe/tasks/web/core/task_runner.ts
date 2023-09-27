@@ -144,7 +144,7 @@ export abstract class TaskRunner {
             })
             .then(buffer => {
               try {
-                // Try to delete file as we cannot overwite an existing file
+                // Try to delete file as we cannot overwrite an existing file
                 // using our current API.
                 this.graphRunner.wasmModule.FS_unlink('/model.dat');
               } catch {
@@ -325,7 +325,10 @@ export abstract class TaskRunner {
         true, FREE_MEMORY_STREAM, this.latestOutputTimestamp);
   }
 
-  /** Closes and cleans up the resources held by this task. */
+  /**
+   * Closes and cleans up the resources held by this task.
+   * @export
+   */
   close(): void {
     this.keepaliveNode = undefined;
     this.graphRunner.closeGraph();

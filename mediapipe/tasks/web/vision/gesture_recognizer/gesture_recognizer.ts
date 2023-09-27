@@ -63,7 +63,7 @@ export class GestureRecognizer extends VisionTaskRunner {
   private gestures: Category[][] = [];
   private landmarks: NormalizedLandmark[][] = [];
   private worldLandmarks: Landmark[][] = [];
-  private handednesses: Category[][] = [];
+  private handedness: Category[][] = [];
 
   private readonly options: GestureRecognizerGraphOptions;
   private readonly handLandmarkerGraphOptions: HandLandmarkerGraphOptions;
@@ -76,12 +76,15 @@ export class GestureRecognizer extends VisionTaskRunner {
   /**
    * An array containing the pairs of hand landmark indices to be rendered with
    * connections.
+   * @export
+   * @nocollapse
    */
   static HAND_CONNECTIONS = HAND_CONNECTIONS;
 
   /**
    * Initializes the Wasm runtime and creates a new gesture recognizer from the
    * provided options.
+   * @export
    * @param wasmFileset A configuration object that provides the location of the
    *     Wasm binary and its loader.
    * @param gestureRecognizerOptions The options for the gesture recognizer.
@@ -99,6 +102,7 @@ export class GestureRecognizer extends VisionTaskRunner {
   /**
    * Initializes the Wasm runtime and creates a new gesture recognizer based on
    * the provided model asset buffer.
+   * @export
    * @param wasmFileset A configuration object that provides the location of the
    *     Wasm binary and its loader.
    * @param modelAssetBuffer A binary representation of the model.
@@ -113,6 +117,7 @@ export class GestureRecognizer extends VisionTaskRunner {
   /**
    * Initializes the Wasm runtime and creates a new gesture recognizer based on
    * the path to the model asset.
+   * @export
    * @param wasmFileset A configuration object that provides the location of the
    *     Wasm binary and its loader.
    * @param modelAssetPath The path to the model asset.
@@ -169,6 +174,7 @@ export class GestureRecognizer extends VisionTaskRunner {
    * You can reset an option back to its default value by explicitly setting it
    * to `undefined`.
    *
+   * @export
    * @param options The options for the gesture recognizer.
    */
   override setOptions(options: GestureRecognizerOptions): Promise<void> {
@@ -229,6 +235,7 @@ export class GestureRecognizer extends VisionTaskRunner {
    * synchronously for the response. Only use this method when the
    * GestureRecognizer is created with running mode `image`.
    *
+   * @export
    * @param image A single image to process.
    * @param imageProcessingOptions the `ImageProcessingOptions` specifying how
    *    to process the input image before running inference.
@@ -247,6 +254,7 @@ export class GestureRecognizer extends VisionTaskRunner {
    * synchronously for the response. Only use this method when the
    * GestureRecognizer is created with running mode `video`.
    *
+   * @export
    * @param videoFrame A video frame to process.
    * @param timestamp The timestamp of the current frame, in ms.
    * @param imageProcessingOptions the `ImageProcessingOptions` specifying how
@@ -266,7 +274,7 @@ export class GestureRecognizer extends VisionTaskRunner {
     this.gestures = [];
     this.landmarks = [];
     this.worldLandmarks = [];
-    this.handednesses = [];
+    this.handedness = [];
   }
 
   private processResults(): GestureRecognizerResult {
@@ -276,14 +284,16 @@ export class GestureRecognizer extends VisionTaskRunner {
         gestures: [],
         landmarks: [],
         worldLandmarks: [],
-        handednesses: [],
+        handedness: [],
+        handednesses: []
       };
     } else {
       return {
         gestures: this.gestures,
         landmarks: this.landmarks,
         worldLandmarks: this.worldLandmarks,
-        handednesses: this.handednesses
+        handedness: this.handedness,
+        handednesses: this.handedness
       };
     }
   }
@@ -332,7 +342,7 @@ export class GestureRecognizer extends VisionTaskRunner {
    * Converts raw data into a landmark, and adds it to our worldLandmarks
    * list.
    */
-  private adddJsWorldLandmarks(data: Uint8Array[]): void {
+  private addJsWorldLandmarks(data: Uint8Array[]): void {
     for (const binaryProto of data) {
       const handWorldLandmarksProto =
           LandmarkList.deserializeBinary(binaryProto);
@@ -386,7 +396,7 @@ export class GestureRecognizer extends VisionTaskRunner {
 
     this.graphRunner.attachProtoVectorListener(
         WORLD_LANDMARKS_STREAM, (binaryProto, timestamp) => {
-          this.adddJsWorldLandmarks(binaryProto);
+          this.addJsWorldLandmarks(binaryProto);
           this.setLatestOutputTimestamp(timestamp);
         });
     this.graphRunner.attachEmptyPacketListener(
@@ -409,7 +419,7 @@ export class GestureRecognizer extends VisionTaskRunner {
 
     this.graphRunner.attachProtoVectorListener(
         HANDEDNESS_STREAM, (binaryProto, timestamp) => {
-          this.handednesses.push(...this.toJsCategories(binaryProto));
+          this.handedness.push(...this.toJsCategories(binaryProto));
           this.setLatestOutputTimestamp(timestamp);
         });
     this.graphRunner.attachEmptyPacketListener(HANDEDNESS_STREAM, timestamp => {

@@ -30,10 +30,12 @@ py_library(
     srcs = ["__init__.py"],
     visibility = ["//visibility:public"],
     deps = [
+        ":bert_tokenizer",
         ":dataset",
         ":hyperparameters",
         ":model_options",
         ":model_spec",
+        ":preprocessor",
         ":text_classifier",
         ":text_classifier_options",
     ],
@@ -48,7 +50,10 @@ py_library(
 py_library(
     name = "hyperparameters",
     srcs = ["hyperparameters.py"],
-    deps = ["//mediapipe/model_maker/python/core:hyperparameters"],
+    deps = [
+        ":bert_tokenizer",
+        "//mediapipe/model_maker/python/core:hyperparameters",
+    ],
 )
 
 py_library(
@@ -89,9 +94,42 @@ py_test(
 )
 
 py_library(
+    name = "model_with_tokenizer",
+    srcs = ["model_with_tokenizer.py"],
+)
+
+py_test(
+    name = "model_with_tokenizer_test",
+    srcs = ["model_with_tokenizer_test.py"],
+    tags = ["requires-net:external"],
+    deps = [
+        ":bert_tokenizer",
+        ":model_spec",
+        ":model_with_tokenizer",
+        "//mediapipe/model_maker/python/core/utils:hub_loader",
+    ],
+)
+
+py_library(
+    name = "bert_tokenizer",
+    srcs = ["bert_tokenizer.py"],
+)
+
+py_test(
+    name = "bert_tokenizer_test",
+    srcs = ["bert_tokenizer_test.py"],
+    tags = ["requires-net:external"],
+    deps = [
+        ":bert_tokenizer",
+        ":model_spec",
+    ],
+)
+
+py_library(
     name = "preprocessor",
     srcs = ["preprocessor.py"],
     deps = [
+        ":bert_tokenizer",
         ":dataset",
         "//mediapipe/model_maker/python/core/data:cache_files",
     ],
@@ -102,6 +140,7 @@ py_test(
     srcs = ["preprocessor_test.py"],
     tags = ["requires-net:external"],
     deps = [
+        ":bert_tokenizer",
         ":dataset",
         ":model_spec",
         ":preprocessor",
@@ -123,10 +162,12 @@ py_library(
     name = "text_classifier",
     srcs = ["text_classifier.py"],
     deps = [
+        ":bert_tokenizer",
         ":dataset",
         ":hyperparameters",
         ":model_options",
         ":model_spec",
+        ":model_with_tokenizer",
         ":preprocessor",
         ":text_classifier_options",
         "//mediapipe/model_maker/python/core/data:dataset",
@@ -143,7 +184,7 @@ py_library(
 
 py_test(
     name = "text_classifier_test",
-    size = "large",
+    size = "enormous",
     srcs = ["text_classifier_test.py"],
     data = [
         "//mediapipe/model_maker/python/text/text_classifier/testdata",

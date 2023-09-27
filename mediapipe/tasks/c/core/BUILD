@@ -20,3 +20,13 @@ cc_library(
     name = "base_options",
     hdrs = ["base_options.h"],
 )
+
+cc_library(
+    name = "base_options_converter",
+    srcs = ["base_options_converter.cc"],
+    hdrs = ["base_options_converter.h"],
+    deps = [
+        ":base_options",
+        "//mediapipe/tasks/cc/core:base_options",
+    ],
+)
