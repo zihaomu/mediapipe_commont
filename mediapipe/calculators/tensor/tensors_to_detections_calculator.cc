@@ -289,7 +289,9 @@ absl::Status TensorsToDetectionsCalculator::Open(CalculatorContext* cc) {
   return absl::OkStatus();
 }
 
-absl::Status TensorsToDetectionsCalculator::Process(CalculatorContext* cc) {
+// MOO_COMMENT: 后处理入口函数
+absl::Status TensorsToDetectionsCalculator::Process(CalculatorContext* cc) 
+{
   auto output_detections = absl::make_unique<std::vector<Detection>>();
   bool gpu_processing = false;
   if (CanUseGpu() && gpu_has_enough_work_groups_) {
@@ -345,6 +347,7 @@ absl::Status TensorsToDetectionsCalculator::Process(CalculatorContext* cc) {
   return absl::OkStatus();
 }
 
+// CPU 处理流程！
 absl::Status TensorsToDetectionsCalculator::ProcessCPU(
     CalculatorContext* cc, std::vector<Detection>* output_detections) {
   const auto& input_tensors = *kInTensors(cc);
@@ -736,6 +739,7 @@ absl::Status TensorsToDetectionsCalculator::LoadOptions(CalculatorContext* cc) {
     }
   }
 
+  // Hand Detector 没用到下面这个。
   if (options_.has_tensor_mapping()) {
     RET_CHECK_OK(CheckCustomTensorMapping(options_.tensor_mapping()));
     tensor_mapping_ = options_.tensor_mapping();
