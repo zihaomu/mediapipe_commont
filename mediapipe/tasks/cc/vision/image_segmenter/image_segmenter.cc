@@ -289,7 +289,7 @@ absl::StatusOr<ImageSegmenterResult> ImageSegmenter::SegmentForVideo(
                        /*roi_allowed=*/false));
   ASSIGN_OR_RETURN(
       auto output_packets,
-      ProcessVideoData(
+      ProcessVideoData( // video和image的主要区别是什么？有时间戳，其他看起来一样。
           {{kImageInStreamName,
             MakePacket<Image>(std::move(image))
                 .At(Timestamp(timestamp_ms * kMicroSecondsPerMilliSecond))},

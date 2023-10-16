@@ -250,6 +250,7 @@ std::vector<Image> ProcessForConfidenceMaskCpu(const Shape& input_shape,
 
 }  // namespace
 
+// 将分割输出转换为两个mask，一个是confidence mask，一个是category mask。
 // Converts Tensors from a vector of Tensor to Segmentation masks. The
 // calculator can output optional confidence masks if CONFIDENCE_MASK is
 // connected, and an optional category mask if CATEGORY_MASK is connected. At

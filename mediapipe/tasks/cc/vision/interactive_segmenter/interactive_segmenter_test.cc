@@ -80,7 +80,7 @@ constexpr float kGoldenMaskSimilarity = 0.97;
 
 // Magnification factor used when creating the golden category masks to make
 // them more human-friendly. Since interactive segmenter has only 2 categories,
-// the golden mask uses 0 or 255 for each pixel.
+// the golden mask uses 0 or 255 for each pixel. // mask 只有两个数值
 constexpr int kGoldenMaskMagnificationFactor = 255;
 
 // Intentionally converting output into CV_8UC1 and then again into CV_32FC1
@@ -184,6 +184,7 @@ TEST_F(CreateFromOptionsTest, FailsWithNeitherOutputSet) {
                        HasSubstr("At least one of")));
 }
 
+// 怎么从点算出ROI
 struct InteractiveSegmenterTestParams {
   std::string test_name;
   RegionOfInterest::Format format;
@@ -199,16 +200,16 @@ class SucceedSegmentationWithRoi
   absl::StatusOr<RegionOfInterest> TestParamsToTaskOptions() {
     const InteractiveSegmenterTestParams& params = GetParam();
 
-    RegionOfInterest interaction_roi;
+    RegionOfInterest interaction_roi; // 这一步还是点
     interaction_roi.format = params.format;
     switch (params.format) {
       case (RegionOfInterest::Format::kKeyPoint): {
-        interaction_roi.keypoint = std::get<NormalizedKeypoint>(params.roi);
+        interaction_roi.keypoint = std::get<NormalizedKeypoint>(params.roi); // 单点模式
         break;
       }
       case (RegionOfInterest::Format::kScribble): {
         interaction_roi.scribble =
-            std::get<std::vector<NormalizedKeypoint>>(params.roi);
+            std::get<std::vector<NormalizedKeypoint>>(params.roi);  // 涂鸦模式，其实就是多个点。
         break;
       }
       default: {
@@ -242,9 +243,9 @@ TEST_P(SucceedSegmentationWithRoi, SucceedsWithCategoryMask) {
   EXPECT_FALSE(result.confidence_masks.has_value());
 
   cv::Mat actual_mask = mediapipe::formats::MatView(
-      result.category_mask->GetImageFrameSharedPtr().get());
+      result.category_mask->GetImageFrameSharedPtr().get()); // 输出的mask
 
-  cv::Mat expected_mask =
+  cv::Mat expected_mask = // ground trueth
       cv::imread(JoinPath("./", kTestDataDirectory, params.golden_mask_file),
                  cv::IMREAD_GRAYSCALE);
   EXPECT_THAT(actual_mask,
@@ -252,7 +253,7 @@ TEST_P(SucceedSegmentationWithRoi, SucceedsWithCategoryMask) {
                                  kGoldenMaskMagnificationFactor));
 
   cv::Mat visualized_mask;
-  actual_mask.convertTo(visualized_mask, CV_8UC1, /*alpha=*/255);
+  actual_mask.convertTo(visualized_mask, CV_8UC1, /*alpha=*/255); // 将所有元素乘上255
   ImageFrame visualized_image(mediapipe::ImageFormat::GRAY8,
                               visualized_mask.cols, visualized_mask.rows,
                               visualized_mask.step, visualized_mask.data,
@@ -263,18 +264,23 @@ TEST_P(SucceedSegmentationWithRoi, SucceedsWithCategoryMask) {
 
 TEST_P(SucceedSegmentationWithRoi, SucceedsWithConfidenceMask) {
   MP_ASSERT_OK_AND_ASSIGN(RegionOfInterest interaction_roi,
-                          TestParamsToTaskOptions());
+                          TestParamsToTaskOptions()); // 创建roi
   const InteractiveSegmenterTestParams& params = GetParam();
 
   MP_ASSERT_OK_AND_ASSIGN(
       Image image, DecodeImageFromFile(JoinPath("./", kTestDataDirectory,
-                                                params.input_image_file)));
+                                                params.input_image_file))); // 获取输入图片
   auto options = std::make_unique<InteractiveSegmenterOptions>();
   options->base_options.model_asset_path =
-      JoinPath("./", kTestDataDirectory, kPtmModel);
+      JoinPath("./", kTestDataDirectory, kPtmModel); // load模型
 
+  // step1 : 创建segmenter，这一步会创建出Segment->ProcessImageData->runner
+  // runner 的类型是由ImageSegmenterGraph创建的，
+  // 创建顺序：先根据options创建ImageSegmenterGraphOptionsProto，然后创建CalculatorGraphConfig，然后创建runner
   MP_ASSERT_OK_AND_ASSIGN(std::unique_ptr<InteractiveSegmenter> segmenter,
                           InteractiveSegmenter::Create(std::move(options)));
+  
+  // step2 : 执行segmenter。
   MP_ASSERT_OK_AND_ASSIGN(auto result,
                           segmenter->Segment(image, interaction_roi));
   EXPECT_FALSE(result.category_mask.has_value());

@@ -23,6 +23,9 @@ namespace tasks {
 namespace audio {
 namespace core {
 
+// 声音特征的特殊性，是一段一段的，还是声音流的格式执行。
+// 这两种格式执行类似于runImage和runVideo的区别。此处应该还有声音领域的跟踪策略。类似于跟踪某一个具体的频谱。
+
 // The running mode of a MediaPipe audio task.
 enum RunningMode {
   // Run the audio task on independent audio clips.

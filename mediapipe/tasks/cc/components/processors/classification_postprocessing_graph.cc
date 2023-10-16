@@ -252,7 +252,7 @@ absl::Status ConfigureScoreCalibrationIfAny(
   const auto* tensor_metadata =
       metadata_extractor.GetOutputTensorMetadata(tensor_index);
   if (tensor_metadata == nullptr) {
-    return absl::OkStatus();
+    return absl::OkStatus(); // 标定数据的配置文件不存在，直接不标定。Q：实际真的有用到吗？
   }
   // Get ScoreCalibrationOptions, if any.
   ASSIGN_OR_RETURN(const ProcessUnit* score_calibration_process_unit,
@@ -308,7 +308,7 @@ void ConfigureClassificationAggregationCalculator(
 absl::Status ConfigureTensorsToClassificationCalculator(
     const proto::ClassifierOptions& options,
     const ModelMetadataExtractor& metadata_extractor, int tensor_index,
-    TensorsToClassificationCalculatorOptions* calculator_options) {
+    TensorsToClassificationCalculatorOptions* calculator_options) { // 这个是输出的config信息
   const auto* tensor_metadata =
       metadata_extractor.GetOutputTensorMetadata(tensor_index);
 
@@ -516,6 +516,7 @@ class ClassificationPostprocessingGraph : public mediapipe::Subgraph {
           tensors_to_classification_nodes.back()->In(kTensorsTag);
     }
 
+    // 将多个分类头集成到一个输出。
     // Aggregates Classifications into a single ClassificationResult.
     auto& result_aggregation =
         graph.AddNode("ClassificationAggregationCalculator");

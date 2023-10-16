@@ -34,6 +34,9 @@ namespace tasks {
 namespace vision {
 namespace image_segmenter {
 
+// 这是一个通用的分割接口，其中包括selfish segment，hair segment和interactive segment。
+// 如何集成拆分到我自己的项目中？分析这三个功能的异同点。对于分割的前后处理共同部分可以单独拿出来放到Segmenter这个类别中。
+// 更合适的是创建一个Segmenter-> InteractiveSegmenter, SelfishSegmenter, HairSegmenter分别创建这三个类别。各自负责自己的分割部分。
 // The options for configuring a mediapipe image segmenter task.
 struct ImageSegmenterOptions {
   // Base options for configuring MediaPipe Tasks, such as specifying the model
@@ -47,6 +50,7 @@ struct ImageSegmenterOptions {
   // 3) The live stream mode for segmenting image on the live stream of input
   // data, such as from camera. In this mode, the "result_callback" below must
   // be specified to receive the segmentation results asynchronously.
+  // 视频的运行模式是否要支持？需要支持，只要推理时间少于30ms，就能够实时推理。
   core::RunningMode running_mode = core::RunningMode::IMAGE;
 
   // The locale to use for display names specified through the TFLite Model
@@ -215,7 +219,7 @@ class ImageSegmenter : tasks::vision::core::BaseVisionTaskApi {
   //     no longer be valid when the callback returns. To access the image data
   //     outside of the callback, callers need to make a copy of the image.
   //   - The input timestamp in milliseconds.
-  absl::Status SegmentAsync(mediapipe::Image image, int64_t timestamp_ms,
+  absl::Status SegmentAsync(mediapipe::Image image, int64_t timestamp_ms, // 回调函数输出方式。
                             SegmentationOptions segmentation_options);
 
   // Shuts down the ImageSegmenter when all works are done.

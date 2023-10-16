@@ -133,8 +133,8 @@ class ModelResources {
   std::unique_ptr<ExternalFileHandler> model_file_handler_;
   // The packet stores the TFLite model for actual inference.
   api2::Packet<ModelPtr> model_packet_;
-  // The packet stores the TFLite Metadata extractor built from the model.
-  api2::Packet<metadata::ModelMetadataExtractor> metadata_extractor_packet_;
+  // The packet stores the TFLite Metadata extractor built from the model. // 这里存放模型的mean和std值。也就是说模型的东西存在了task中。
+  api2::Packet<metadata::ModelMetadataExtractor> metadata_extractor_packet_; // 有没有默认值？
 
   // Extra verifier for FlatBuffer input data.
   Verifier verifier_;

@@ -39,10 +39,11 @@ namespace vision {
 namespace interactive_segmenter {
 namespace internal {
 
+// 设置点的强度，保证点的大小和图片大小比例相关，从而让大图的点不会太小。
 // A calculator to add thickness to the render data according to the image size,
 // so that the render data is scale invariant to the image size. If the render
 // data already has thickness, it will be kept as is.
-class AddThicknessToRenderDataCalculator : public api2::Node {
+class AddThicknessToRenderDataCalculator : public api2::Node { // 只是添加强度的API，并没有生成图片。
  public:
   static constexpr api2::Input<Image> kImageIn{"IMAGE"};
   static constexpr api2::Input<mediapipe::RenderData> kRenderDataIn{
@@ -58,11 +59,13 @@ class AddThicknessToRenderDataCalculator : public api2::Node {
   absl::Status Process(CalculatorContext* cc) final {
     mediapipe::RenderData render_data = kRenderDataIn(cc).Get();
     Image image = kImageIn(cc).Get();
+    // 强度值为长宽比例和1的最大值。
     double thickness = std::max(
         std::max(image.width() / static_cast<double>(kModelInputTensorWidth),
                  image.height() / static_cast<double>(kModelInputTensorHeight)),
         1.0);
 
+    // 遍历render data, 如果没有thickness，就设置为thickness。
     for (auto& annotation : *render_data.mutable_render_annotations()) {
       if (!annotation.has_thickness()) {
         annotation.set_thickness(thickness);
@@ -108,17 +111,18 @@ constexpr absl::string_view kRoiTag{"ROI"};
 constexpr absl::string_view kQualityScoresTag{"QUALITY_SCORES"};
 constexpr absl::string_view kRenderDataTag{"RENDER_DATA"};
 
+// 下面的函数是将Point和Scribe转换成mask。
 // Updates the graph to return `roi` stream which has same dimension as
 // `image`, and rendered with `roi`. If `use_gpu` is true, returned `Source` is
 // in GpuBuffer format, otherwise using ImageFrame.
 Source<> RoiToAlpha(Source<Image> image, Source<RenderData> roi, bool use_gpu,
-                    Graph& graph) {
+                    Graph& graph) { // Roi实际上就是一个点
   // TODO: Replace with efficient implementation.
   const absl::string_view image_tag_with_suffix =
       use_gpu ? kImageGpuTag : kImageCpuTag;
 
   // Adds thickness to the render data so that the render data is scale
-  // invariant to the input image size.
+  // invariant to the input image size. // 为什么要添加厚度？这里所谓的scale-invariant是什么意思？是不是渲染中所用到的
   auto& add_thickness = graph.AddNode(
       "mediapipe::tasks::vision::interactive_segmenter::internal::"
       "AddThicknessToRenderDataCalculator");
@@ -127,7 +131,7 @@ Source<> RoiToAlpha(Source<Image> image, Source<RenderData> roi, bool use_gpu,
   auto roi_with_thickness = add_thickness.Out(kRenderDataTag);
 
   // Generates a blank canvas with same size as input image.
-  auto& flat_color = graph.AddNode("FlatColorImageCalculator");
+  auto& flat_color = graph.AddNode("FlatColorImageCalculator"); // 生成一个空图片，给定指定大小。
   auto& flat_color_options =
       flat_color.GetOptions<FlatColorImageCalculatorOptions>();
   // SetAlphaCalculator only takes 1st channel.
@@ -139,7 +143,7 @@ Source<> RoiToAlpha(Source<Image> image, Source<RenderData> roi, bool use_gpu,
   blank_canvas >> from_mp_image.In(kImageTag);
   auto blank_canvas_in_cpu_or_gpu = from_mp_image.Out(image_tag_with_suffix);
 
-  auto& roi_to_alpha = graph.AddNode("AnnotationOverlayCalculator");
+  auto& roi_to_alpha = graph.AddNode("AnnotationOverlayCalculator"); //根据给定的点和点对应的强度生成一个图片。
   blank_canvas_in_cpu_or_gpu >>
       roi_to_alpha.In(use_gpu ? kImageGpuTag : kImageTag);
   roi_with_thickness >> roi_to_alpha.In(0);

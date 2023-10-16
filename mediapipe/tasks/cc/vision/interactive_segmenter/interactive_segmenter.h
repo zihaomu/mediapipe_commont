@@ -35,6 +35,11 @@ namespace tasks {
 namespace vision {
 namespace interactive_segmenter {
 
+/* 
+阅读重点：
+- 关注如何使用将点击，或者涂鸦转换成ROI或者mask的形式作为模型输入。
+*/
+
 // The options for configuring a mediapipe interactive segmenter task.
 struct InteractiveSegmenterOptions {
   // Base options for configuring MediaPipe Tasks, such as specifying the model
@@ -83,7 +88,7 @@ struct RegionOfInterest {
 //   (kTfLiteUInt8/kTfLiteFloat32)
 //    - image input of size `[batch x height x width x channels]`.
 //    - batch inference is not supported (`batch` is required to be 1).
-//    - RGB inputs is supported (`channels` is required to be 3).
+//    - RGB inputs is supported (`channels` is required to be 3). // 实际输入是4通道？？，第四个通道是mask？
 //    - if type is kTfLiteFloat32, NormalizationOptions are required to be
 //      attached to the metadata for input normalization.
 // Output ImageSegmenterResult:
@@ -113,7 +118,8 @@ class InteractiveSegmenter : tasks::vision::core::BaseVisionTaskApi {
   // the rotation to apply to the image before performing segmentation, by
   // setting its 'rotation_degrees' field. Note that specifying a
   // region-of-interest using the 'region_of_interest' field is NOT supported
-  // and will result in an invalid argument error being returned.
+  // and will result in an invalid argument error being returned. // 不支持使用region_of_interest来指定ROI.
+  // 不使用的意思是什么？
   absl::StatusOr<image_segmenter::ImageSegmenterResult> Segment(
       mediapipe::Image image, const RegionOfInterest& roi,
       std::optional<core::ImageProcessingOptions> image_processing_options =

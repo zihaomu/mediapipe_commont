@@ -76,6 +76,9 @@ absl::Status CopyAlphaImage(const cv::Mat& alpha_mat, cv::Mat& output_mat) {
 }
 }  // namespace
 
+// 设置alpha 通道
+// 要确认的问题，alpha通道中，用1还是255。
+// 
 // A calculator for setting the alpha channel of an RGBA image.
 //
 // The alpha channel can be set to a single value, or come from an image mask.
@@ -267,7 +270,7 @@ absl::Status SetAlphaCalculator::RenderCpu(CalculatorContext* cc) {
   // Setup source image
   const auto& input_frame = cc->Inputs().Tag(kInputFrameTag).Get<ImageFrame>();
   const cv::Mat input_mat = formats::MatView(&input_frame);
-  if (!(input_mat.type() == CV_8UC3 || input_mat.type() == CV_8UC4)) {
+  if (!(input_mat.type() == CV_8UC3 || input_mat.type() == CV_8UC4)) { // 输入必须是三或四通道。
     ABSL_LOG(ERROR) << "Only 3 or 4 channel 8-bit input image supported";
   }
 

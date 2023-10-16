@@ -32,6 +32,7 @@ namespace mediapipe {
 namespace tasks {
 namespace core {
 
+// 基类信息，一个模型最基础的运行信息，包括运行设备，模型文件。
 // Base options for MediaPipe C++ Tasks.
 struct BaseOptions {
   // The model asset file contents as a string.

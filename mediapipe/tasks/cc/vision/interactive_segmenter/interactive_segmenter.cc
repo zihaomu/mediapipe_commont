@@ -122,7 +122,7 @@ absl::StatusOr<RenderData> ConvertRoiToRenderData(const RegionOfInterest& roi) {
     case RegionOfInterest::Format::kUnspecified:
       return absl::InvalidArgumentError(
           "RegionOfInterest format not specified");
-    case RegionOfInterest::Format::kKeyPoint: {
+    case RegionOfInterest::Format::kKeyPoint: { // 将普通的点绑定上颜色，没有对点做任何修改，这里的点是normalized之后的点。
       RET_CHECK(roi.keypoint.has_value());
       auto* annotation = result.add_render_annotations();
       annotation->mutable_color()->set_r(255);
@@ -176,8 +176,8 @@ InteractiveSegmenter::Create(
 }
 
 absl::StatusOr<ImageSegmenterResult> InteractiveSegmenter::Segment(
-    mediapipe::Image image, const RegionOfInterest& roi,
-    std::optional<core::ImageProcessingOptions> image_processing_options) {
+    mediapipe::Image image, const RegionOfInterest& roi, // 这里的roi实际是点，或者多个点。
+    std::optional<core::ImageProcessingOptions> image_processing_options) { // 图像中的框和旋转角度。
   if (image.UsesGpu()) {
     return CreateStatusWithPayload(
         absl::StatusCode::kInvalidArgument,
@@ -185,12 +185,12 @@ absl::StatusOr<ImageSegmenterResult> InteractiveSegmenter::Segment(
         MediaPipeTasksStatus::kRunnerUnexpectedInputError);
   }
   ASSIGN_OR_RETURN(NormalizedRect norm_rect,
-                   ConvertToNormalizedRect(image_processing_options, image,
+                   ConvertToNormalizedRect(image_processing_options, image, // 将图像中的框转换成normalized rect。
                                            /*roi_allowed=*/false));
-  ASSIGN_OR_RETURN(RenderData roi_as_render_data, ConvertRoiToRenderData(roi));
+  ASSIGN_OR_RETURN(RenderData roi_as_render_data, ConvertRoiToRenderData(roi)); // 将roi转换成roi as render data目的是？
   ASSIGN_OR_RETURN(
       auto output_packets,
-      ProcessImageData(
+      ProcessImageData( // 处理图像数据，这一步是干啥的？
           {{kImageInStreamName, mediapipe::MakePacket<Image>(std::move(image))},
            {kRoiStreamName,
             mediapipe::MakePacket<RenderData>(std::move(roi_as_render_data))},

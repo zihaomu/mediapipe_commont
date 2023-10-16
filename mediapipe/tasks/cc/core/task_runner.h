@@ -70,7 +70,7 @@ class TaskRunner {
   // asynchronous method, Send(), to provide the input packets. If the packets
   // callback is absent, clients must use the synchronous method, Process(), to
   // provide the input packets and receive the output packets.
-  static absl::StatusOr<std::unique_ptr<TaskRunner>> Create(
+  static absl::StatusOr<std::unique_ptr<TaskRunner>> Create( // 通过GraphConfig去构建图，GraphConfig实际包含了是一个个算子。
       CalculatorGraphConfig config,
       std::unique_ptr<tflite::OpResolver> op_resolver = nullptr,
       PacketsCallback packets_callback = nullptr);
@@ -90,7 +90,7 @@ class TaskRunner {
   // thread-unsafe and it is the caller's responsibility to synchronize access
   // to this method across multiple threads and to ensure that the input packet
   // timestamps are in order.
-  absl::StatusOr<PacketMap> Process(PacketMap inputs);
+  absl::StatusOr<PacketMap> Process(PacketMap inputs); // 同步的运行接口。
 
   // An asynchronous method that is designed for handling live streaming data
   // such as live camera and microphone data. A user-defined PacketsCallback
@@ -99,7 +99,7 @@ class TaskRunner {
   // increasing. This method is thread-unsafe and it is the caller's
   // responsibility to synchronize access to this method across multiple
   // threads and to ensure that the input packet timestamps are in order.
-  absl::Status Send(PacketMap inputs);
+  absl::Status Send(PacketMap inputs);                 // 异步的运行接口，在回调函数中返回结果。
 
   // Shuts down the task runner. After the runner is closed, unless the
   // runner's Start method is called again, any calls that send input data

@@ -20,7 +20,7 @@ limitations under the License.
 #include "mediapipe/tasks/cc/text/custom_ops/sentencepiece/utils.h"
 
 namespace mediapipe::tflite_operations::sentencepiece {
-
+// trie 特里树是字典树，前缀紧凑且经过空间优化的字典树。
 // A trie node specifies a node in the tree, either an intermediate node or
 // a leaf node.
 // A leaf node contains the id as an int of the string match. This id is encoded

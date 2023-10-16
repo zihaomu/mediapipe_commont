@@ -56,6 +56,10 @@ float ClampedLog(float x, float threshold) {
 }
 }  // namespace
 
+// score 结果标定，
+//究竟是标定些什么内容，在哪种情况会用到？
+// A: 在classification 和 detection的post processing都会有用到。
+// Q: 是都必须用到还是有选择性的
 // Applies score calibration to a tensor of score predictions, typically applied
 // to the output of a classification or object detection model.
 //
@@ -91,7 +95,7 @@ class ScoreCalibrationCalculator : public Node {
 
  private:
   ScoreCalibrationCalculatorOptions options_;
-  std::function<float(float)> score_transformation_;
+  std::function<float(float)> score_transformation_; // lambda表达式，用来区分不同的标定格式
 
   // Computes the calibrated score for the provided index. Does not check for
   // out-of-bounds index.

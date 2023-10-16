@@ -72,7 +72,7 @@ using ::mediapipe::tasks::components::containers::proto::ClassificationResult;
 //  }
 // }
 //
-// Example with timestamp aggregation:
+// Example with timestamp aggregation:  // 这个应该是将同一时间多个classifier的结果聚合起来。
 // node {
 //   calculator: "ClassificationAggregationCalculator"
 //   input_stream: "CLASSIFICATIONS:0:stream_a"
@@ -88,7 +88,7 @@ using ::mediapipe::tasks::components::containers::proto::ClassificationResult;
 //    }
 //  }
 // }
-class ClassificationAggregationCalculator : public Node {
+class ClassificationAggregationCalculator : public Node { // 这个算子是干啥的？
  public:
   static constexpr Input<ClassificationList>::Multiple kClassificationListIn{
       "CLASSIFICATIONS"};

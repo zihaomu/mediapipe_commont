@@ -66,6 +66,8 @@ inline bool HasImageTag(mediapipe::CalculatorContext* cc) {
 }
 }  // namespace
 
+// 这个算子本意是将要渲染数据，渲染到指定的图片上去。
+// 被用来用做将point和scribe转换成mask作为分割图像的输入也是可以的。
 // A calculator for rendering data on images.
 //
 // Inputs:
@@ -342,7 +344,7 @@ absl::Status AnnotationOverlayCalculator::Process(CalculatorContext* cc) {
   } else {
     if (cc->Outputs().HasTag(kImageTag)) {
       MP_RETURN_IF_ERROR(
-          CreateRenderTargetCpuImage(cc, image_mat, &target_format));
+          CreateRenderTargetCpuImage(cc, image_mat, &target_format)); // 只是创建一张所需要的图片而已。
     }
     if (cc->Outputs().HasTag(kImageFrameTag)) {
       MP_RETURN_IF_ERROR(CreateRenderTargetCpu(cc, image_mat, &target_format));
@@ -352,7 +354,7 @@ absl::Status AnnotationOverlayCalculator::Process(CalculatorContext* cc) {
   // Reset the renderer with the image_mat. No copy here.
   renderer_->AdoptImage(image_mat.get());
 
-  // Render streams onto render target.
+  // Render streams onto render target. // 开始画图（渲染）
   for (CollectionItemId id = cc->Inputs().BeginId(); id < cc->Inputs().EndId();
        ++id) {
     auto tag_and_index = cc->Inputs().TagAndIndexFromId(id);
@@ -566,12 +568,12 @@ absl::Status AnnotationOverlayCalculator::CreateRenderTargetCpuImage(
     }
 
     image_mat = absl::make_unique<cv::Mat>(
-        input_frame.height(), input_frame.width(), target_mat_type);
+        input_frame.height(), input_frame.width(), target_mat_type); // 创建Mat用来接受
 
     auto input_mat = formats::MatView(&input_frame);
     if (input_frame.image_format() == ImageFormat::GRAY8) {
       cv::Mat rgb_mat;
-      cv::cvtColor(*input_mat, rgb_mat, cv::COLOR_GRAY2RGB);
+      cv::cvtColor(*input_mat, rgb_mat, cv::COLOR_GRAY2RGB);         // 将输入图片转换
       rgb_mat.copyTo(*image_mat);
     } else {
       input_mat->copyTo(*image_mat);
@@ -680,6 +682,7 @@ absl::Status AnnotationOverlayCalculator::GlSetup(CalculatorContext* cc) {
   };
 
   // Shader to overlay a texture onto another when overlay is non-zero.
+  // 具体执行的shader
   constexpr char kFragSrcBody[] = R"(
   DEFAULT_PRECISION(mediump, float)
   #ifdef GL_ES

@@ -151,7 +151,7 @@ absl::Status ConfigureTensorsToSegmentationCalculator(
   options->mutable_segmenter_options()->CopyFrom(
       segmenter_option.segmenter_options());
   // Find the custom metadata of ImageSegmenterOptions type in model metadata.
-  const auto* metadata_extractor = model_resources.GetMetadataExtractor();
+  const auto* metadata_extractor = model_resources.GetMetadataExtractor(); // 这个数据在哪出来的？
   bool found_activation_in_metadata = false;
   if (metadata_extractor->GetCustomMetadataList() != nullptr &&
       metadata_extractor->GetCustomMetadataList()->size() > 0) {
@@ -476,7 +476,7 @@ class ImageSegmenterGraph : public core::ModelTaskGraph {
   // model file with model metadata.
   // image_in: (mediapipe::Image) stream to run segmentation on.
   // graph: the mediapipe builder::Graph instance to be updated.
-  absl::StatusOr<ImageSegmenterOutputs> BuildSegmentationTask(
+  absl::StatusOr<ImageSegmenterOutputs> BuildSegmentationTask( // 这个是实际创建实例的地方
       const ImageSegmenterGraphOptions& task_options,
       const core::ModelResources& model_resources, Source<Image> image_in,
       Source<NormalizedRect> norm_rect_in,

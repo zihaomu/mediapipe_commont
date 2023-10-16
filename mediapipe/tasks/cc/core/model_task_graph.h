@@ -38,6 +38,8 @@ namespace mediapipe {
 namespace tasks {
 namespace core {
 
+// 每个任务的基类，一个具体的任务基于一个具体的图，一个具体的图基于ModelTaskGraph.
+// 每个具体的任务都需要实现GetConfig方法，去描述具体图的每个节点的结构。
 // The base class of mediapipe task graphs.
 // Graph authors need to create a derived class per mediapipe task graph,
 // and override the GetConfig() method to dynamically compose the task-specific
