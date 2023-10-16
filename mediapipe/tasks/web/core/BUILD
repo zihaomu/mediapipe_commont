@@ -28,6 +28,13 @@ mediapipe_ts_library(
     ],
 )
 
+genrule(
+    name = "run_script_genrule",
+    srcs = ["fileset_resolver.ts.template"],
+    outs = ["fileset_resolver.ts"],
+    cmd = "cp $< $@",
+)
+
 mediapipe_ts_library(
     name = "fileset_resolver",
     srcs = ["fileset_resolver.ts"],
@@ -59,6 +66,7 @@ mediapipe_ts_library(
         ":task_runner",
         ":task_runner_test_utils",
         "//mediapipe/calculators/tensor:inference_calculator_jspb_proto",
+        "//mediapipe/gpu:gpu_origin_jspb_proto",
         "//mediapipe/tasks/cc/core/proto:base_options_jspb_proto",
         "//mediapipe/web/graph_runner:graph_runner_ts",
     ],

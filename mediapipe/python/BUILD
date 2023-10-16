@@ -52,6 +52,7 @@ pybind_extension(
         "@stblib//:stb_image",
         # Type registration.
         "//mediapipe/framework:basic_types_registration",
+        "//mediapipe/framework/formats:body_rig_registration",
         "//mediapipe/framework/formats:classification_registration",
         "//mediapipe/framework/formats:detection_registration",
         "//mediapipe/framework/formats:landmark_registration",
@@ -90,6 +91,8 @@ cc_library(
     deps = [
         "//mediapipe/tasks/cc/audio/audio_classifier:audio_classifier_graph",
         "//mediapipe/tasks/cc/audio/audio_embedder:audio_embedder_graph",
+        "//mediapipe/tasks/cc/text/text_classifier:text_classifier_graph",
+        "//mediapipe/tasks/cc/text/text_embedder:text_embedder_graph",
         "//mediapipe/tasks/cc/vision/face_detector:face_detector_graph",
         "//mediapipe/tasks/cc/vision/face_landmarker:face_landmarker_graph",
         "//mediapipe/tasks/cc/vision/face_stylizer:face_stylizer_graph",
@@ -100,14 +103,7 @@ cc_library(
         "//mediapipe/tasks/cc/vision/interactive_segmenter:interactive_segmenter_graph",
         "//mediapipe/tasks/cc/vision/object_detector:object_detector_graph",
         "//mediapipe/tasks/cc/vision/pose_landmarker:pose_landmarker_graph",
-    ] + select({
-        # TODO: Build text_classifier_graph and text_embedder_graph on Windows.
-        "//mediapipe:windows": [],
-        "//conditions:default": [
-            "//mediapipe/tasks/cc/text/text_classifier:text_classifier_graph",
-            "//mediapipe/tasks/cc/text/text_embedder:text_embedder_graph",
-        ],
-    }),
+    ],
 )
 
 py_library(

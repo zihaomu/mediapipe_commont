@@ -13,8 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include <memory>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -31,20 +29,16 @@ limitations under the License.
 #include "mediapipe/framework/formats/image.h"
 #include "mediapipe/framework/formats/landmark.pb.h"
 #include "mediapipe/framework/formats/rect.pb.h"
-#include "mediapipe/framework/formats/tensor.h"
+#include "mediapipe/framework/port/status_macros.h"
 #include "mediapipe/tasks/cc/common.h"
 #include "mediapipe/tasks/cc/components/processors/image_preprocessing_graph.h"
 #include "mediapipe/tasks/cc/components/utils/gate.h"
 #include "mediapipe/tasks/cc/core/model_resources.h"
 #include "mediapipe/tasks/cc/core/model_task_graph.h"
 #include "mediapipe/tasks/cc/core/proto/inference_subgraph.pb.h"
-#include "mediapipe/tasks/cc/core/utils.h"
-#include "mediapipe/tasks/cc/metadata/metadata_extractor.h"
 #include "mediapipe/tasks/cc/vision/hand_landmarker/proto/hand_landmarks_detector_graph_options.pb.h"
 #include "mediapipe/tasks/cc/vision/utils/image_tensor_specs.h"
-#include "mediapipe/tasks/metadata/metadata_schema_generated.h"
 #include "mediapipe/util/label_map.pb.h"
-#include "mediapipe/util/label_map_util.h"
 
 namespace mediapipe {
 namespace tasks {
@@ -212,11 +206,11 @@ class SingleHandLandmarksDetectorGraph : public core::ModelTaskGraph {
  public:
   absl::StatusOr<CalculatorGraphConfig> GetConfig(
       SubgraphContext* sc) override {
-    ASSIGN_OR_RETURN(
+    MP_ASSIGN_OR_RETURN(
         const auto* model_resources,
-        CreateModelResources<HandLandmarksDetectorGraphOptions>(sc));
+        GetOrCreateModelResources<HandLandmarksDetectorGraphOptions>(sc));
     Graph graph;
-    ASSIGN_OR_RETURN(
+    MP_ASSIGN_OR_RETURN(
         auto hand_landmark_detection_outs,
         BuildSingleHandLandmarksDetectorGraph(
             sc->Options<HandLandmarksDetectorGraphOptions>(), *model_resources,
@@ -262,15 +256,15 @@ class SingleHandLandmarksDetectorGraph : public core::ModelTaskGraph {
         components::processors::DetermineImagePreprocessingGpuBackend(
             subgraph_options.base_options().acceleration());
     MP_RETURN_IF_ERROR(components::processors::ConfigureImagePreprocessingGraph(
-        model_resources, use_gpu,
+        model_resources, use_gpu, subgraph_options.base_options().gpu_origin(),
         &preprocessing.GetOptions<tasks::components::processors::proto::
                                       ImagePreprocessingGraphOptions>()));
     image_in >> preprocessing.In("IMAGE");
     hand_rect >> preprocessing.In("NORM_RECT");
     auto image_size = preprocessing[Output<std::pair<int, int>>("IMAGE_SIZE")];
 
-    ASSIGN_OR_RETURN(auto image_tensor_specs,
-                     BuildInputImageTensorSpecs(model_resources));
+    MP_ASSIGN_OR_RETURN(auto image_tensor_specs,
+                        BuildInputImageTensorSpecs(model_resources));
 
     auto& inference = AddInference(
         model_resources, subgraph_options.base_options().acceleration(), graph);
@@ -462,7 +456,7 @@ class MultipleHandLandmarksDetectorGraph : public core::ModelTaskGraph {
   absl::StatusOr<CalculatorGraphConfig> GetConfig(
       SubgraphContext* sc) override {
     Graph graph;
-    ASSIGN_OR_RETURN(
+    MP_ASSIGN_OR_RETURN(
         auto hand_landmark_detection_outputs,
         BuildHandLandmarksDetectorGraph(
             sc->Options<HandLandmarksDetectorGraphOptions>(),
@@ -492,8 +486,8 @@ class MultipleHandLandmarksDetectorGraph : public core::ModelTaskGraph {
     auto& hand_landmark_subgraph = graph.AddNode(
         "mediapipe.tasks.vision.hand_landmarker."
         "SingleHandLandmarksDetectorGraph");
-    hand_landmark_subgraph.GetOptions<HandLandmarksDetectorGraphOptions>()
-        .CopyFrom(subgraph_options);
+    hand_landmark_subgraph.GetOptions<HandLandmarksDetectorGraphOptions>() =
+        subgraph_options;
 
     auto& begin_loop_multi_hand_rects =
         graph.AddNode("BeginLoopNormalizedRectCalculator");

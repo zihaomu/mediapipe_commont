@@ -22,8 +22,10 @@ limitations under the License.
 namespace mediapipe::tasks::c::components::containers {
 
 void CppConvertToClassificationResult(
-    mediapipe::tasks::components::containers::ClassificationResult in,
+    const mediapipe::tasks::components::containers::ClassificationResult& in,
     ClassificationResult* out);
+
+void CppCloseClassificationResult(ClassificationResult* in);
 
 }  // namespace mediapipe::tasks::c::components::containers
 

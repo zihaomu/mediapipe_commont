@@ -160,7 +160,7 @@ InteractiveSegmenter::Create(
   }
   std::unique_ptr<ImageSegmenterGraphOptionsProto> options_proto =
       ConvertImageSegmenterOptionsToProto(options.get());
-  ASSIGN_OR_RETURN(
+  MP_ASSIGN_OR_RETURN(
       std::unique_ptr<InteractiveSegmenter> segmenter,
       (core::VisionTaskApiFactory::Create<InteractiveSegmenter,
                                           ImageSegmenterGraphOptionsProto>(
@@ -184,11 +184,15 @@ absl::StatusOr<ImageSegmenterResult> InteractiveSegmenter::Segment(
         absl::StrCat("GPU input images are currently not supported."),
         MediaPipeTasksStatus::kRunnerUnexpectedInputError);
   }
-  ASSIGN_OR_RETURN(NormalizedRect norm_rect,
-                   ConvertToNormalizedRect(image_processing_options, image, // 将图像中的框转换成normalized rect。
-                                           /*roi_allowed=*/false));
-  ASSIGN_OR_RETURN(RenderData roi_as_render_data, ConvertRoiToRenderData(roi)); // 将roi转换成roi as render data目的是？
-  ASSIGN_OR_RETURN(
+  // 将图像中的框转换成normalized rect。
+  MP_ASSIGN_OR_RETURN(NormalizedRect norm_rect,
+                      ConvertToNormalizedRect(image_processing_options, image,
+                                              /*roi_allowed=*/false));
+
+  // 将roi转换成roi as render data目的是？
+  MP_ASSIGN_OR_RETURN(RenderData roi_as_render_data,
+                      ConvertRoiToRenderData(roi));
+  MP_ASSIGN_OR_RETURN(
       auto output_packets,
       ProcessImageData( // 处理图像数据，这一步是干啥的？
           {{kImageInStreamName, mediapipe::MakePacket<Image>(std::move(image))},
