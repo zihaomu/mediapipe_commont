@@ -36,6 +36,7 @@ limitations under the License.
 #include "mediapipe/framework/port/canonical_errors.h"
 #include "mediapipe/framework/port/opencv_core_inc.h"
 #include "mediapipe/framework/port/opencv_imgproc_inc.h"
+#include "mediapipe/framework/port/opencv_imgcodecs_inc.h"
 #include "mediapipe/framework/port/status_macros.h"
 #include "mediapipe/tasks/cc/vision/image_segmenter/calculators/tensors_to_segmentation_calculator.pb.h"
 #include "mediapipe/tasks/cc/vision/image_segmenter/proto/segmenter_options.pb.h"
@@ -178,7 +179,7 @@ Image ProcessForCategoryMaskCpu(const Shape& input_shape,
   });
   return category_mask;
 }
-
+// 实际的处理流程。
 std::vector<Image> ProcessForConfidenceMaskCpu(const Shape& input_shape,
                                                const Shape& output_shape,
                                                const SegmenterOptions& options,
@@ -201,7 +202,7 @@ std::vector<Image> ProcessForConfidenceMaskCpu(const Shape& input_shape,
       };
       break;
   }
-
+  // 需要将输出从Mat转换为mask
   // TODO Use libyuv for resizing instead.
   std::vector<Image> confidence_masks;
   std::vector<cv::Mat> confidence_mask_mats;
@@ -214,6 +215,8 @@ std::vector<Image> ProcessForConfidenceMaskCpu(const Shape& input_shape,
         confidence_masks.back().GetImageFrameSharedPtr().get()));
   }
 
+  // LOG(INFO) << "confidence_mask_mats::i = "<<confidence_mask_mats[0];
+  // cv::imwrite("/Users/mzh/work/data/output_before.jpg", confidence_mask_mats[0]);
   // Applies activation function.
   const int tensor_size = input_shape.height * input_shape.width;
   std::vector<float> activated_values(input_shape.channels);
@@ -225,8 +228,10 @@ std::vector<Image> ProcessForConfidenceMaskCpu(const Shape& input_shape,
     for (int j = 0; j < input_shape.channels; ++j) {
       confidence_mask_mats[j].at<float>(
           i / input_shape.width, i % input_shape.width) = activated_values[j];
+    // LOG(INFO) << "confidence_mask_mats::i = "<<std::to_string(activated_values[j]);
     }
   }
+  cv::imwrite("/Users/mzh/work/data/output_before100.jpg", confidence_mask_mats[0]*120);
   if (output_shape.height == input_shape.height &&
       output_shape.width == input_shape.width) {
     return confidence_masks;
@@ -243,6 +248,8 @@ std::vector<Image> ProcessForConfidenceMaskCpu(const Shape& input_shape,
         mediapipe::formats::MatView(image_frame_ptr.get());
     cv::resize(confidence_mask_mats[i], resized_mask_mat_view,
                resized_mask_mat_view.size(), 0, 0, cv::INTER_LINEAR);
+    
+    cv::imwrite("/Users/mzh/work/data/output_before"+std::to_string(i)+".jpg", resized_mask_mat_view * 255);
     resized_confidence_masks.push_back(Image(image_frame_ptr));
   }
   return resized_confidence_masks;
@@ -358,6 +365,7 @@ absl::Status TensorsToSegmentationCalculator::Open(
 
 absl::Status TensorsToSegmentationCalculator::Process(
     mediapipe::CalculatorContext* cc) {
+  LOG(INFO) << "TensorsToSegmentationCalculator::Process";
   const auto& input_tensors = kTensorsIn(cc).Get();
   if (input_tensors.size() != 1 && input_tensors.size() != 2) {
     return absl::InvalidArgumentError(
@@ -442,6 +450,20 @@ absl::Status TensorsToSegmentationCalculator::Process(
 
   // Otherwise, use CPU postprocessing.
   const float* tensors_buffer = input_tensor.GetCpuReadView().buffer<float>();
+  std::vector<float> dataTmp(512*512, 0.f);
+  std::memcpy(dataTmp.data(), tensors_buffer, 512*512*sizeof(float));
+
+  cv::Mat input = cv::Mat(512, 512, CV_32FC1, dataTmp.data());
+  cv::imwrite("/Users/mzh/work/data/output_before_anyprocess.jpg", input*255);
+  // std::cout<<"output tensor!"<<std::endl;
+  // for (int i = 0; i < 512; i++)
+  // {
+  //   for (int j = 0; j < 512; j++)
+  //   {
+  //     std::cout<<", "<<tensors_buffer[i*512+j];
+  //   }
+  //   std::cout<<std::endl;
+  // }
 
   // TODO: remove deprecated output type support.
   if (options_.segmenter_options().has_output_type()) {

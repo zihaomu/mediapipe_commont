@@ -282,6 +282,7 @@ cc_library(
         "//mediapipe/framework/formats:video_stream_header",
         "//mediapipe/framework/port:opencv_core",
         "//mediapipe/framework/port:opencv_imgproc",
+        "//mediapipe/framework/port:opencv_imgcodecs",
         "//mediapipe/framework/port:status",
         "//mediapipe/framework/port:vector",
         "//mediapipe/util:annotation_renderer",

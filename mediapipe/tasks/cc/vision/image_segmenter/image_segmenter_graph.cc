@@ -299,7 +299,7 @@ absl::StatusOr<ImageAndTensorsOnDevice> ConvertImageToTensors(
     Source<Image> image_on_device = image_clone.Out("").Cast<Image>();
 
     // Convert from Image to legacy ImageFrame or GpuBuffer.
-    auto& from_image = graph.AddNode("FromImageCalculator");
+    auto& from_image = graph.AddNode("FromImageCalculator"); //确定是否转换成GPU 输入
     image_on_device >> from_image.In(kImageTag);
     Source<api2::AnyType> image_cpu_or_gpu =
         from_image.Out(use_gpu ? kImageGpuTag : kImageCpuTag);
@@ -313,7 +313,7 @@ absl::StatusOr<ImageAndTensorsOnDevice> ConvertImageToTensors(
     }
 
     // Resize the input image to the model input size.
-    auto& image_transformation = graph.AddNode("ImageTransformationCalculator");
+    auto& image_transformation = graph.AddNode("ImageTransformationCalculator"); // resize到模型的输入大小
     ConfigureImageTransformationCalculator(
         *tflite_input_tensor,
         image_transformation
@@ -324,7 +324,7 @@ absl::StatusOr<ImageAndTensorsOnDevice> ConvertImageToTensors(
     auto transformed_image = image_transformation.Out(image_or_image_gpu_tag);
 
     // Convert image to mediapipe tensor.
-    auto& tensor_converter = graph.AddNode("TensorConverterCalculator");
+    auto& tensor_converter = graph.AddNode("TensorConverterCalculator"); // 具体做了哪些操作？实际只是拷贝数据。
     MP_ASSIGN_OR_RETURN(auto image_tensor_specs,
                         vision::BuildInputImageTensorSpecs(model_resources));
     ConfigureTensorConverterCalculator(
@@ -396,7 +396,7 @@ absl::StatusOr<ImageAndTensorsOnDevice> ConvertImageToTensors(
 // }
 class ImageSegmenterGraph : public core::ModelTaskGraph {
  public:
-  absl::StatusOr<mediapipe::CalculatorGraphConfig> GetConfig(
+  absl::StatusOr<mediapipe::CalculatorGraphConfig> GetConfig(  // 获取graph config
       mediapipe::SubgraphContext* sc) override {
     MP_ASSIGN_OR_RETURN(const auto* model_resources,
                         CreateModelResources<ImageSegmenterGraphOptions>(sc));
@@ -412,7 +412,7 @@ class ImageSegmenterGraph : public core::ModelTaskGraph {
     }
     MP_ASSIGN_OR_RETURN(
         auto output_streams,
-        BuildSegmentationTask(
+        BuildSegmentationTask(  // 根据options来获取配置。
             options, *model_resources, graph[Input<Image>(kImageTag)],
             graph[Input<NormalizedRect>::Optional(kNormRectTag)], output_size,
             graph));
@@ -490,6 +490,7 @@ class ImageSegmenterGraph : public core::ModelTaskGraph {
         components::processors::DetermineImagePreprocessingGpuBackend(
             task_options.base_options().acceleration());
 
+    // 处理输出的地方
     // Adds segmentation calculators for output streams. Add this calculator
     // first to get the labels.
     auto& tensor_to_images =
@@ -515,6 +516,7 @@ class ImageSegmenterGraph : public core::ModelTaskGraph {
       is_hair_segmentation = true;
     }
 
+    // 初始化数据。
     MP_ASSIGN_OR_RETURN(
         auto image_and_tensors,
         ConvertImageToTensors(image_in, norm_rect_in, use_gpu,
@@ -525,7 +527,7 @@ class ImageSegmenterGraph : public core::ModelTaskGraph {
     auto& inference = AddInference(
         model_resources, task_options.base_options().acceleration(), graph);
     image_and_tensors.tensors >> inference.In(kTensorsTag);
-    inference.Out(kTensorsTag) >> tensor_to_images.In(kTensorsTag);
+    inference.Out(kTensorsTag) >> tensor_to_images.In(kTensorsTag); // 将模型输出直接送进TensorsToSegmentationCalculator
 
     if (output_size.has_value()) {
       *output_size >> tensor_to_images.In(kOutputSizeTag);

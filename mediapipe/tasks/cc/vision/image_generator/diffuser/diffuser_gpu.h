@@ -52,7 +52,7 @@ typedef struct {
 } DiffuserEnvironmentOptions;
 
 typedef struct {
-  DiffuserModelType model_type;
+  DiffuserModelType model_type; // 模型类型
   char model_dir[PATH_MAX];
   char lora_dir[PATH_MAX];
   const void* lora_weights_layer_mapping;

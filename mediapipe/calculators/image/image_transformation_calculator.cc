@@ -22,6 +22,7 @@
 #include "mediapipe/framework/packet.h"
 #include "mediapipe/framework/port/opencv_core_inc.h"
 #include "mediapipe/framework/port/opencv_imgproc_inc.h"
+#include "mediapipe/framework/port/opencv_imgcodecs_inc.h"
 #include "mediapipe/framework/port/ret_check.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipe/framework/timestamp.h"
@@ -365,6 +366,7 @@ absl::Status ImageTransformationCalculator::Open(CalculatorContext* cc) {
 }
 
 absl::Status ImageTransformationCalculator::Process(CalculatorContext* cc) {
+  LOG(INFO) << "ImageTransformationCalculator::Process";
   // First update the video header if it is given, based on the rotation and
   // dimensions specified as side packets or options. This will only be done
   // once, so streaming transformation changes will not be reflected in
@@ -569,6 +571,8 @@ absl::Status ImageTransformationCalculator::RenderCpu(CalculatorContext* cc) {
   } else {
     flipped_mat = rotated_mat;
   }
+
+  cv::imwrite("/Users/mzh/work/data/after_pre.jpg", flipped_mat);
 
   std::unique_ptr<ImageFrame> output_frame(
       new ImageFrame(format, output_width, output_height));

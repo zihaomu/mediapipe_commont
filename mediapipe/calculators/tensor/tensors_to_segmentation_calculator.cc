@@ -329,9 +329,11 @@ absl::Status TensorsToSegmentationCalculator::Close(CalculatorContext* cc) {
   return absl::OkStatus();
 }
 
+// cpu输出处理流程。
 absl::Status TensorsToSegmentationCalculator::ProcessCpu(
     CalculatorContext* cc) {
 #if !MEDIAPIPE_DISABLE_OPENCV
+  LOG(INFO) << "MOO:TensorsToSegmentationCalculator:: ProcessCpu";  
   // Get input streams, and dimensions.
   const auto& input_tensors =
       cc->Inputs().Tag(kTensorsTag).Get<std::vector<Tensor>>();

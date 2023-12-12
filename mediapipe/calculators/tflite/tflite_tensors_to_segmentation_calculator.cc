@@ -266,6 +266,8 @@ absl::Status TfLiteTensorsToSegmentationCalculator::Close(
 
 absl::Status TfLiteTensorsToSegmentationCalculator::ProcessCpu(
     CalculatorContext* cc) {
+
+  LOG(INFO) << "MOO: TfLiteTensorsToSegmentationCalculator::ProcessCpu";
   if (cc->Inputs().Tag(kTensorsTag).IsEmpty()) {
     return absl::OkStatus();
   }

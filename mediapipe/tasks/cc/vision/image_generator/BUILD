@@ -14,6 +14,13 @@
 
 licenses(["notice"])
 
+cc_library(
+    name = "image_generator_result",
+    hdrs = ["image_generator_result.h"],
+    visibility = ["//visibility:public"],
+    deps = ["//mediapipe/framework/formats:image"],
+)
+
 package(default_visibility = ["//mediapipe/tasks:internal"])
 
 cc_library(
@@ -96,12 +103,6 @@ cc_library(
 )
 
 cc_library(
-    name = "image_generator_result",
-    hdrs = ["image_generator_result.h"],
-    deps = ["//mediapipe/framework/formats:image"],
-)
-
-cc_library(
     name = "image_generator",
     srcs = ["image_generator.cc"],
     hdrs = ["image_generator.h"],
@@ -132,5 +133,17 @@ cc_library(
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
         "@com_google_absl//absl/time",
+    ],
+)
+
+cc_binary(
+    name = "image_generator_demo",
+    srcs = ["image_generator_demo.cc"],
+    deps = [
+        ":image_generator",
+        ":image_generator_graph",
+        ":image_generator_result",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
     ],
 )

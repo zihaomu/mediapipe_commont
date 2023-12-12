@@ -89,7 +89,7 @@ struct ConditionOptions {
 // The options for configuring a mediapipe image generator task.
 struct ImageGeneratorOptions {
   // The text to image model directory storing the model weights.
-  std::string text2image_model_directory;
+  std::string text2image_model_directory; // 模型文件路径，具体需要什么形式？
 
   // The path to LoRA weights file.
   std::optional<std::string> lora_weights_file_path;

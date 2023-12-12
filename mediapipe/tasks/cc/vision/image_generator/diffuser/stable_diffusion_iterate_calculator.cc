@@ -142,7 +142,7 @@ class StableDiffusionIterateCalculator : public Node {
     return diffuser_tensors;
   }
 
-  absl::Status LoadDiffuser() {
+  absl::Status LoadDiffuser() {  // 这部分由内部库实现，并不开源，应该内部是包含一些核心技术。
     handle_ = dlopen("libimagegenerator_gpu.so", RTLD_NOW | RTLD_LOCAL);
     RET_CHECK(handle_) << dlerror();
     create_ptr_ = reinterpret_cast<DiffuserContext* (*)(const DiffuserConfig*)>(
@@ -198,7 +198,7 @@ absl::Status StableDiffusionIterateCalculator::Open(CalculatorContext* cc) {
   show_every_n_iteration_ = options.show_every_n_iteration();
   emit_empty_packet_ = options.emit_empty_packet();
 
-  MP_RETURN_IF_ERROR(LoadDiffuser());
+  MP_RETURN_IF_ERROR(LoadDiffuser());  // 加载内部库
 
   DiffuserConfig config;
   config.model_type = ToDiffuserModelType(options.model_type());

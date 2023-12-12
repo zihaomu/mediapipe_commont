@@ -46,7 +46,7 @@ limitations under the License.
 #include "tensorflow/lite/kernels/builtin_op_kernels.h"
 #include "tensorflow/lite/mutable_op_resolver.h"
 #include "tensorflow/lite/test_util.h"
-#include "testing/base/public/gmock.h"
+// #include "testing/base/public/gmock.h"
 
 namespace mediapipe {
 namespace tasks {
@@ -62,10 +62,10 @@ using ::mediapipe::tasks::vision::core::ImageProcessingOptions;
 using ::testing::HasSubstr;
 using ::testing::Optional;
 using ::testing::SizeIs;
-using ::testing::status::StatusIs;
+// using ::testing::status::StatusIs;
 
 constexpr absl::string_view kTestDataDirectory{
-    "/mediapipe/tasks/testdata/vision/"};
+    "/Users/mzh/work/github/mediapipe_commont/mediapipe/tasks/testdata/vision/"};
 constexpr absl::string_view kPtmModel{"ptm_512_hdt_ptm_woid.tflite"};
 constexpr absl::string_view kCatsAndDogsJpg{"cats_and_dogs.jpg"};
 // Golden mask for the dogs in cats_and_dogs.jpg.
@@ -159,236 +159,236 @@ TEST_F(CreateFromOptionsTest, FailsWithSelectiveOpResolverMissingOps) {
       testing::HasSubstr("interpreter_builder(&interpreter) == kTfLiteOk"));
 }
 
-TEST_F(CreateFromOptionsTest, FailsWithMissingModel) {
-  absl::StatusOr<std::unique_ptr<InteractiveSegmenter>> segmenter =
-      InteractiveSegmenter::Create(
-          std::make_unique<InteractiveSegmenterOptions>());
+ TEST_F(CreateFromOptionsTest, FailsWithMissingModel) {
+   absl::StatusOr<std::unique_ptr<InteractiveSegmenter>> segmenter =
+       InteractiveSegmenter::Create(
+           std::make_unique<InteractiveSegmenterOptions>());
 
-  EXPECT_EQ(segmenter.status().code(), absl::StatusCode::kInvalidArgument);
-  EXPECT_THAT(
-      segmenter.status().message(),
-      HasSubstr("ExternalFile must specify at least one of 'file_content', "
-                "'file_name', 'file_pointer_meta' or 'file_descriptor_meta'."));
-  EXPECT_THAT(segmenter.status().GetPayload(kMediaPipeTasksPayload),
-              Optional(absl::Cord(absl::StrCat(
-                  MediaPipeTasksStatus::kRunnerInitializationError))));
-}
+   EXPECT_EQ(segmenter.status().code(), absl::StatusCode::kInvalidArgument);
+   EXPECT_THAT(
+       segmenter.status().message(),
+       HasSubstr("ExternalFile must specify at least one of 'file_content', "
+                 "'file_name', 'file_pointer_meta' or 'file_descriptor_meta'."));
+   EXPECT_THAT(segmenter.status().GetPayload(kMediaPipeTasksPayload),
+               Optional(absl::Cord(absl::StrCat(
+                   MediaPipeTasksStatus::kRunnerInitializationError))));
+ }
 
-TEST_F(CreateFromOptionsTest, FailsWithNeitherOutputSet) {
-  auto options = std::make_unique<InteractiveSegmenterOptions>();
-  options->output_category_mask = false;
-  options->output_confidence_masks = false;
+ TEST_F(CreateFromOptionsTest, FailsWithNeitherOutputSet) {
+   auto options = std::make_unique<InteractiveSegmenterOptions>();
+   options->output_category_mask = false;
+   options->output_confidence_masks = false;
 
-  EXPECT_THAT(InteractiveSegmenter::Create(std::move(options)),
-              StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("At least one of")));
-}
+   EXPECT_THAT(InteractiveSegmenter::Create(std::move(options)),
+               StatusIs(absl::StatusCode::kInvalidArgument,
+                        HasSubstr("At least one of")));
+ }
 
-// 怎么从点算出ROI
-struct InteractiveSegmenterTestParams {
-  std::string test_name;
-  RegionOfInterest::Format format;
-  std::variant<NormalizedKeypoint, std::vector<NormalizedKeypoint>> roi;
-  absl::string_view input_image_file;
-  absl::string_view golden_mask_file;
-  float similarity_threshold;
-};
+ // 怎么从点算出ROI
+ struct InteractiveSegmenterTestParams {
+   std::string test_name;
+   RegionOfInterest::Format format;
+   std::variant<NormalizedKeypoint, std::vector<NormalizedKeypoint>> roi;
+   absl::string_view input_image_file;
+   absl::string_view golden_mask_file;
+   float similarity_threshold;
+ };
 
-class SucceedSegmentationWithRoi
-    : public ::testing::TestWithParam<InteractiveSegmenterTestParams> {
- public:
-  absl::StatusOr<RegionOfInterest> TestParamsToTaskOptions() {
-    const InteractiveSegmenterTestParams& params = GetParam();
+ class SucceedSegmentationWithRoi
+     : public ::testing::TestWithParam<InteractiveSegmenterTestParams> {
+  public:
+   absl::StatusOr<RegionOfInterest> TestParamsToTaskOptions() {
+     const InteractiveSegmenterTestParams& params = GetParam();
 
-    RegionOfInterest interaction_roi; // 这一步还是点
-    interaction_roi.format = params.format;
-    switch (params.format) {
-      case (RegionOfInterest::Format::kKeyPoint): {
-        interaction_roi.keypoint = std::get<NormalizedKeypoint>(params.roi); // 单点模式
-        break;
-      }
-      case (RegionOfInterest::Format::kScribble): {
-        interaction_roi.scribble =
-            std::get<std::vector<NormalizedKeypoint>>(params.roi);  // 涂鸦模式，其实就是多个点。
-        break;
-      }
-      default: {
-        return absl::InvalidArgumentError("Unknown ROI format");
-      }
-    }
+     RegionOfInterest interaction_roi; // 这一步还是点
+     interaction_roi.format = params.format;
+     switch (params.format) {
+       case (RegionOfInterest::Format::kKeyPoint): {
+         interaction_roi.keypoint = std::get<NormalizedKeypoint>(params.roi); // 单点模式
+         break;
+       }
+       case (RegionOfInterest::Format::kScribble): {
+         interaction_roi.scribble =
+             std::get<std::vector<NormalizedKeypoint>>(params.roi);  // 涂鸦模式，其实就是多个点。
+         break;
+       }
+       default: {
+         return absl::InvalidArgumentError("Unknown ROI format");
+       }
+     }
 
-    return interaction_roi;
-  }
-};
+     return interaction_roi;
+   }
+ };
 
-TEST_P(SucceedSegmentationWithRoi, SucceedsWithCategoryMask) {
-  MP_ASSERT_OK_AND_ASSIGN(RegionOfInterest interaction_roi,
-                          TestParamsToTaskOptions());
-  const InteractiveSegmenterTestParams& params = GetParam();
+ TEST_P(SucceedSegmentationWithRoi, SucceedsWithCategoryMask) {
+   MP_ASSERT_OK_AND_ASSIGN(RegionOfInterest interaction_roi,
+                           TestParamsToTaskOptions());
+   const InteractiveSegmenterTestParams& params = GetParam();
 
-  MP_ASSERT_OK_AND_ASSIGN(
-      Image image, DecodeImageFromFile(JoinPath("./", kTestDataDirectory,
-                                                params.input_image_file)));
-  auto options = std::make_unique<InteractiveSegmenterOptions>();
-  options->base_options.model_asset_path =
-      JoinPath("./", kTestDataDirectory, kPtmModel);
-  options->output_confidence_masks = false;
-  options->output_category_mask = true;
+   MP_ASSERT_OK_AND_ASSIGN(
+       Image image, DecodeImageFromFile(JoinPath("./", kTestDataDirectory,
+                                                 params.input_image_file)));
+   auto options = std::make_unique<InteractiveSegmenterOptions>();
+   options->base_options.model_asset_path =
+       JoinPath("./", kTestDataDirectory, kPtmModel);
+   options->output_confidence_masks = false;
+   options->output_category_mask = true;
 
-  MP_ASSERT_OK_AND_ASSIGN(std::unique_ptr<InteractiveSegmenter> segmenter,
-                          InteractiveSegmenter::Create(std::move(options)));
-  MP_ASSERT_OK_AND_ASSIGN(auto result,
-                          segmenter->Segment(image, interaction_roi));
-  EXPECT_TRUE(result.category_mask.has_value());
-  EXPECT_FALSE(result.confidence_masks.has_value());
+   MP_ASSERT_OK_AND_ASSIGN(std::unique_ptr<InteractiveSegmenter> segmenter,
+                           InteractiveSegmenter::Create(std::move(options)));
+   MP_ASSERT_OK_AND_ASSIGN(auto result,
+                           segmenter->Segment(image, interaction_roi));
+   EXPECT_TRUE(result.category_mask.has_value());
+   EXPECT_FALSE(result.confidence_masks.has_value());
 
-  cv::Mat actual_mask = mediapipe::formats::MatView(
-      result.category_mask->GetImageFrameSharedPtr().get()); // 输出的mask
+   cv::Mat actual_mask = mediapipe::formats::MatView(
+       result.category_mask->GetImageFrameSharedPtr().get()); // 输出的mask
 
-  cv::Mat expected_mask = // ground trueth
-      cv::imread(JoinPath("./", kTestDataDirectory, params.golden_mask_file),
-                 cv::IMREAD_GRAYSCALE);
-  EXPECT_THAT(actual_mask,
-              SimilarToUint8Mask(expected_mask, params.similarity_threshold,
-                                 kGoldenMaskMagnificationFactor));
+   cv::Mat expected_mask = // ground trueth
+       cv::imread(JoinPath("./", kTestDataDirectory, params.golden_mask_file),
+                  cv::IMREAD_GRAYSCALE);
+   EXPECT_THAT(actual_mask,
+               SimilarToUint8Mask(expected_mask, params.similarity_threshold,
+                                  kGoldenMaskMagnificationFactor));
 
-  cv::Mat visualized_mask;
-  actual_mask.convertTo(visualized_mask, CV_8UC1, /*alpha=*/255); // 将所有元素乘上255
-  ImageFrame visualized_image(mediapipe::ImageFormat::GRAY8,
-                              visualized_mask.cols, visualized_mask.rows,
-                              visualized_mask.step, visualized_mask.data,
-                              [visualized_mask](uint8_t[]) {});
-  MP_EXPECT_OK(SavePngTestOutput(
-      visualized_image, absl::StrFormat("%s_category_mask", params.test_name)));
-}
+   cv::Mat visualized_mask;
+   actual_mask.convertTo(visualized_mask, CV_8UC1, /*alpha=*/255); // 将所有元素乘上255
+   ImageFrame visualized_image(mediapipe::ImageFormat::GRAY8,
+                               visualized_mask.cols, visualized_mask.rows,
+                               visualized_mask.step, visualized_mask.data,
+                               [visualized_mask](uint8_t[]) {});
+   MP_EXPECT_OK(SavePngTestOutput(
+       visualized_image, absl::StrFormat("%s_category_mask", params.test_name)));
+ }
 
-TEST_P(SucceedSegmentationWithRoi, SucceedsWithConfidenceMask) {
-  MP_ASSERT_OK_AND_ASSIGN(RegionOfInterest interaction_roi,
-                          TestParamsToTaskOptions()); // 创建roi
-  const InteractiveSegmenterTestParams& params = GetParam();
+ TEST_P(SucceedSegmentationWithRoi, SucceedsWithConfidenceMask) {
+   MP_ASSERT_OK_AND_ASSIGN(RegionOfInterest interaction_roi,
+                           TestParamsToTaskOptions()); // 创建roi
+   const InteractiveSegmenterTestParams& params = GetParam();
 
-  MP_ASSERT_OK_AND_ASSIGN(
-      Image image, DecodeImageFromFile(JoinPath("./", kTestDataDirectory,
-                                                params.input_image_file))); // 获取输入图片
-  auto options = std::make_unique<InteractiveSegmenterOptions>();
-  options->base_options.model_asset_path =
-      JoinPath("./", kTestDataDirectory, kPtmModel); // load模型
+   MP_ASSERT_OK_AND_ASSIGN(
+       Image image, DecodeImageFromFile(JoinPath("./", kTestDataDirectory,
+                                                 params.input_image_file))); // 获取输入图片
+   auto options = std::make_unique<InteractiveSegmenterOptions>();
+   options->base_options.model_asset_path =
+       JoinPath("./", kTestDataDirectory, kPtmModel); // load模型
 
-  // step1 : 创建segmenter，这一步会创建出Segment->ProcessImageData->runner
-  // runner 的类型是由ImageSegmenterGraph创建的，
-  // 创建顺序：先根据options创建ImageSegmenterGraphOptionsProto，然后创建CalculatorGraphConfig，然后创建runner
-  MP_ASSERT_OK_AND_ASSIGN(std::unique_ptr<InteractiveSegmenter> segmenter,
-                          InteractiveSegmenter::Create(std::move(options)));
+   // step1 : 创建segmenter，这一步会创建出Segment->ProcessImageData->runner
+   // runner 的类型是由ImageSegmenterGraph创建的，
+   // 创建顺序：先根据options创建ImageSegmenterGraphOptionsProto，然后创建CalculatorGraphConfig，然后创建runner
+   MP_ASSERT_OK_AND_ASSIGN(std::unique_ptr<InteractiveSegmenter> segmenter,
+                           InteractiveSegmenter::Create(std::move(options)));
   
-  // step2 : 执行segmenter。
-  MP_ASSERT_OK_AND_ASSIGN(auto result,
-                          segmenter->Segment(image, interaction_roi));
-  EXPECT_FALSE(result.category_mask.has_value());
-  EXPECT_THAT(result.confidence_masks, Optional(SizeIs(2)));
+   // step2 : 执行segmenter。
+   MP_ASSERT_OK_AND_ASSIGN(auto result,
+                           segmenter->Segment(image, interaction_roi));
+   EXPECT_FALSE(result.category_mask.has_value());
+   EXPECT_THAT(result.confidence_masks, Optional(SizeIs(2)));
 
-  cv::Mat expected_mask =
-      cv::imread(JoinPath("./", kTestDataDirectory, params.golden_mask_file),
-                 cv::IMREAD_GRAYSCALE);
-  cv::Mat expected_mask_float;
-  expected_mask.convertTo(expected_mask_float, CV_32FC1, 1 / 255.f);
+   cv::Mat expected_mask =
+       cv::imread(JoinPath("./", kTestDataDirectory, params.golden_mask_file),
+                  cv::IMREAD_GRAYSCALE);
+   cv::Mat expected_mask_float;
+   expected_mask.convertTo(expected_mask_float, CV_32FC1, 1 / 255.f);
 
-  cv::Mat actual_mask = mediapipe::formats::MatView(
-      result.confidence_masks->at(1).GetImageFrameSharedPtr().get());
-  EXPECT_THAT(actual_mask, SimilarToFloatMask(expected_mask_float,
-                                              params.similarity_threshold));
-  cv::Mat visualized_mask;
-  actual_mask.convertTo(visualized_mask, CV_8UC1, /*alpha=*/255);
-  ImageFrame visualized_image(mediapipe::ImageFormat::GRAY8,
-                              visualized_mask.cols, visualized_mask.rows,
-                              visualized_mask.step, visualized_mask.data,
-                              [visualized_mask](uint8_t[]) {});
-  MP_EXPECT_OK(SavePngTestOutput(
-      visualized_image,
-      absl::StrFormat("%s_confidence_mask", params.test_name)));
-}
+   cv::Mat actual_mask = mediapipe::formats::MatView(
+       result.confidence_masks->at(1).GetImageFrameSharedPtr().get());
+   EXPECT_THAT(actual_mask, SimilarToFloatMask(expected_mask_float,
+                                               params.similarity_threshold));
+   cv::Mat visualized_mask;
+   actual_mask.convertTo(visualized_mask, CV_8UC1, /*alpha=*/255);
+   ImageFrame visualized_image(mediapipe::ImageFormat::GRAY8,
+                               visualized_mask.cols, visualized_mask.rows,
+                               visualized_mask.step, visualized_mask.data,
+                               [visualized_mask](uint8_t[]) {});
+   MP_EXPECT_OK(SavePngTestOutput(
+       visualized_image,
+       absl::StrFormat("%s_confidence_mask", params.test_name)));
+ }
 
-INSTANTIATE_TEST_SUITE_P(
-    SucceedSegmentationWithRoiTest, SucceedSegmentationWithRoi,
-    ::testing::ValuesIn<InteractiveSegmenterTestParams>(
-        {// Keypoint input.
-         {"PointToDog1", RegionOfInterest::Format::kKeyPoint,
-          NormalizedKeypoint{0.44, 0.70}, kCatsAndDogsJpg, kCatsAndDogsMaskDog1,
-          0.84f},
-         {"PointToDog2", RegionOfInterest::Format::kKeyPoint,
-          NormalizedKeypoint{0.66, 0.66}, kCatsAndDogsJpg, kCatsAndDogsMaskDog2,
-          kGoldenMaskSimilarity},
-         {"PenguinsSmall", RegionOfInterest::Format::kKeyPoint,
-          NormalizedKeypoint{0.329, 0.545}, kPenguinsSmall, kPenguinsSmallMask,
-          0.9f},
-         {"PenguinsLarge", RegionOfInterest::Format::kKeyPoint,
-          NormalizedKeypoint{0.329, 0.545}, kPenguinsLarge, kPenguinsLargeMask,
-          0.9f},
-         // Scribble input.
-         {"ScribbleToDog1", RegionOfInterest::Format::kScribble,
-          std::vector{NormalizedKeypoint{0.44, 0.70},
-                      NormalizedKeypoint{0.44, 0.71},
-                      NormalizedKeypoint{0.44, 0.72}},
-          kCatsAndDogsJpg, kCatsAndDogsMaskDog1, 0.84f},
-         {"ScribbleToDog2", RegionOfInterest::Format::kScribble,
-          std::vector{NormalizedKeypoint{0.66, 0.66},
-                      NormalizedKeypoint{0.66, 0.67},
-                      NormalizedKeypoint{0.66, 0.68}},
-          kCatsAndDogsJpg, kCatsAndDogsMaskDog2, kGoldenMaskSimilarity}}),
-    [](const ::testing::TestParamInfo<SucceedSegmentationWithRoi::ParamType>&
-           info) { return info.param.test_name; });
+ INSTANTIATE_TEST_SUITE_P(
+     SucceedSegmentationWithRoiTest, SucceedSegmentationWithRoi,
+     ::testing::ValuesIn<InteractiveSegmenterTestParams>(
+         {// Keypoint input.
+          {"PointToDog1", RegionOfInterest::Format::kKeyPoint,
+           NormalizedKeypoint{0.44, 0.70}, kCatsAndDogsJpg, kCatsAndDogsMaskDog1,
+           0.84f},
+          {"PointToDog2", RegionOfInterest::Format::kKeyPoint,
+           NormalizedKeypoint{0.66, 0.66}, kCatsAndDogsJpg, kCatsAndDogsMaskDog2,
+           kGoldenMaskSimilarity},
+          {"PenguinsSmall", RegionOfInterest::Format::kKeyPoint,
+           NormalizedKeypoint{0.329, 0.545}, kPenguinsSmall, kPenguinsSmallMask,
+           0.9f},
+          {"PenguinsLarge", RegionOfInterest::Format::kKeyPoint,
+           NormalizedKeypoint{0.329, 0.545}, kPenguinsLarge, kPenguinsLargeMask,
+           0.9f},
+          // Scribble input.
+          {"ScribbleToDog1", RegionOfInterest::Format::kScribble,
+           std::vector{NormalizedKeypoint{0.44, 0.70},
+                       NormalizedKeypoint{0.44, 0.71},
+                       NormalizedKeypoint{0.44, 0.72}},
+           kCatsAndDogsJpg, kCatsAndDogsMaskDog1, 0.84f},
+          {"ScribbleToDog2", RegionOfInterest::Format::kScribble,
+           std::vector{NormalizedKeypoint{0.66, 0.66},
+                       NormalizedKeypoint{0.66, 0.67},
+                       NormalizedKeypoint{0.66, 0.68}},
+           kCatsAndDogsJpg, kCatsAndDogsMaskDog2, kGoldenMaskSimilarity}}),
+     [](const ::testing::TestParamInfo<SucceedSegmentationWithRoi::ParamType>&
+            info) { return info.param.test_name; });
 
-class ImageModeTest : public tflite::testing::Test {};
+ class ImageModeTest : public tflite::testing::Test {};
 
-// TODO: fix this unit test after image segmenter handled post
-// processing correctly with rotated image.
-TEST_F(ImageModeTest, DISABLED_SucceedsWithRotation) {
-  MP_ASSERT_OK_AND_ASSIGN(
-      Image image,
-      DecodeImageFromFile(JoinPath("./", kTestDataDirectory, kCatsAndDogsJpg)));
-  RegionOfInterest interaction_roi;
-  interaction_roi.format = RegionOfInterest::Format::kKeyPoint;
-  interaction_roi.keypoint = NormalizedKeypoint{0.66, 0.66};
-  auto options = std::make_unique<InteractiveSegmenterOptions>();
-  options->base_options.model_asset_path =
-      JoinPath("./", kTestDataDirectory, kPtmModel);
+ // TODO: fix this unit test after image segmenter handled post
+ // processing correctly with rotated image.
+ TEST_F(ImageModeTest, DISABLED_SucceedsWithRotation) {
+   MP_ASSERT_OK_AND_ASSIGN(
+       Image image,
+       DecodeImageFromFile(JoinPath("./", kTestDataDirectory, kCatsAndDogsJpg)));
+   RegionOfInterest interaction_roi;
+   interaction_roi.format = RegionOfInterest::Format::kKeyPoint;
+   interaction_roi.keypoint = NormalizedKeypoint{0.66, 0.66};
+   auto options = std::make_unique<InteractiveSegmenterOptions>();
+   options->base_options.model_asset_path =
+       JoinPath("./", kTestDataDirectory, kPtmModel);
 
-  MP_ASSERT_OK_AND_ASSIGN(std::unique_ptr<InteractiveSegmenter> segmenter,
-                          InteractiveSegmenter::Create(std::move(options)));
-  ImageProcessingOptions image_processing_options;
-  image_processing_options.rotation_degrees = -90;
-  MP_ASSERT_OK_AND_ASSIGN(
-      auto result,
-      segmenter->Segment(image, interaction_roi, image_processing_options));
-  EXPECT_FALSE(result.category_mask.has_value());
-  EXPECT_EQ(result.confidence_masks->size(), 2);
-}
+   MP_ASSERT_OK_AND_ASSIGN(std::unique_ptr<InteractiveSegmenter> segmenter,
+                           InteractiveSegmenter::Create(std::move(options)));
+   ImageProcessingOptions image_processing_options;
+   image_processing_options.rotation_degrees = -90;
+   MP_ASSERT_OK_AND_ASSIGN(
+       auto result,
+       segmenter->Segment(image, interaction_roi, image_processing_options));
+   EXPECT_FALSE(result.category_mask.has_value());
+   EXPECT_EQ(result.confidence_masks->size(), 2);
+ }
 
-TEST_F(ImageModeTest, FailsWithRegionOfInterest) {
-  MP_ASSERT_OK_AND_ASSIGN(
-      Image image,
-      DecodeImageFromFile(JoinPath("./", kTestDataDirectory, kCatsAndDogsJpg)));
-  RegionOfInterest interaction_roi;
-  interaction_roi.format = RegionOfInterest::Format::kKeyPoint;
-  interaction_roi.keypoint = NormalizedKeypoint{0.66, 0.66};
-  auto options = std::make_unique<InteractiveSegmenterOptions>();
-  options->base_options.model_asset_path =
-      JoinPath("./", kTestDataDirectory, kPtmModel);
+ TEST_F(ImageModeTest, FailsWithRegionOfInterest) {
+   MP_ASSERT_OK_AND_ASSIGN(
+       Image image,
+       DecodeImageFromFile(JoinPath("./", kTestDataDirectory, kCatsAndDogsJpg)));
+   RegionOfInterest interaction_roi;
+   interaction_roi.format = RegionOfInterest::Format::kKeyPoint;
+   interaction_roi.keypoint = NormalizedKeypoint{0.66, 0.66};
+   auto options = std::make_unique<InteractiveSegmenterOptions>();
+   options->base_options.model_asset_path =
+       JoinPath("./", kTestDataDirectory, kPtmModel);
 
-  MP_ASSERT_OK_AND_ASSIGN(std::unique_ptr<InteractiveSegmenter> segmenter,
-                          InteractiveSegmenter::Create(std::move(options)));
-  RectF roi{/*left=*/0.1, /*top=*/0, /*right=*/0.9, /*bottom=*/1};
-  ImageProcessingOptions image_processing_options{roi, /*rotation_degrees=*/0};
+   MP_ASSERT_OK_AND_ASSIGN(std::unique_ptr<InteractiveSegmenter> segmenter,
+                           InteractiveSegmenter::Create(std::move(options)));
+   RectF roi{/*left=*/0.1, /*top=*/0, /*right=*/0.9, /*bottom=*/1};
+   ImageProcessingOptions image_processing_options{roi, /*rotation_degrees=*/0};
 
-  auto results =
-      segmenter->Segment(image, interaction_roi, image_processing_options);
-  EXPECT_EQ(results.status().code(), absl::StatusCode::kInvalidArgument);
-  EXPECT_THAT(results.status().message(),
-              HasSubstr("This task doesn't support region-of-interest"));
-  EXPECT_THAT(
-      results.status().GetPayload(kMediaPipeTasksPayload),
-      Optional(absl::Cord(absl::StrCat(
-          MediaPipeTasksStatus::kImageProcessingInvalidArgumentError))));
-}
+   auto results =
+       segmenter->Segment(image, interaction_roi, image_processing_options);
+   EXPECT_EQ(results.status().code(), absl::StatusCode::kInvalidArgument);
+   EXPECT_THAT(results.status().message(),
+               HasSubstr("This task doesn't support region-of-interest"));
+   EXPECT_THAT(
+       results.status().GetPayload(kMediaPipeTasksPayload),
+       Optional(absl::Cord(absl::StrCat(
+           MediaPipeTasksStatus::kImageProcessingInvalidArgumentError))));
+ }
 
 }  // namespace
 }  // namespace interactive_segmenter

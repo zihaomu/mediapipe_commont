@@ -57,6 +57,7 @@ class AddThicknessToRenderDataCalculator : public api2::Node { // 只是添加�
   MEDIAPIPE_NODE_CONTRACT(kImageIn, kRenderDataIn, kRenderDataOut);
 
   absl::Status Process(CalculatorContext* cc) final {
+    LOG(INFO) << "MOO:AddThicknessToRenderDataCalculator::Process";
     mediapipe::RenderData render_data = kRenderDataIn(cc).Get();
     Image image = kImageIn(cc).Get();
     // 强度值为长宽比例和1的最大值。
@@ -220,6 +221,7 @@ class InteractiveSegmenterGraph : public core::ModelTaskGraph {
     const absl::string_view alpha_tag_with_suffix =
         use_gpu ? kAlphaGpuTag : kAlphaTag;
 
+    // 转换成GPU
     auto& from_mp_image = graph.AddNode("FromImageCalculator");
     image >> from_mp_image.In(kImageTag);
     auto image_in_cpu_or_gpu = from_mp_image.Out(image_tag_with_suffix);

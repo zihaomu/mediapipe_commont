@@ -23,6 +23,7 @@
 #include "mediapipe/framework/formats/image_frame_opencv.h"
 #include "mediapipe/framework/port/opencv_core_inc.h"
 #include "mediapipe/framework/port/opencv_imgproc_inc.h"
+#include "mediapipe/framework/port/opencv_highgui_inc.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipe/framework/port/vector.h"
 
@@ -58,19 +59,24 @@ absl::Status CopyAlphaImage(const cv::Mat& alpha_mat, cv::Mat& output_mat) {
   RET_CHECK_EQ(output_mat.rows, alpha_mat.rows);
   RET_CHECK_EQ(output_mat.cols, alpha_mat.cols);
 
-  for (int i = 0; i < output_mat.rows; ++i) {
+  for (int i = 0; i < output_mat.rows; ++i) 
+  {
+    const uchar* alpha_data_ptr = alpha_mat.row(i).ptr<uchar>();
     const AlphaType* alpha_ptr = alpha_mat.ptr<AlphaType>(i);
     uchar* out_ptr = output_mat.ptr<uchar>(i);
-    for (int j = 0; j < output_mat.cols; ++j) {
+    for (int j = 0; j < output_mat.cols; ++j) 
+    {
       const int out_idx = j * kNumChannelsRGBA;
       const int alpha_idx = j * alpha_mat.channels();
       if constexpr (std::is_same<AlphaType, uchar>::value) {
+        std::cout<<","<<(int)alpha_data_ptr[alpha_idx + 0];
         out_ptr[out_idx + 3] = alpha_ptr[alpha_idx + 0];  // channel 0 of mask
       } else {
         const AlphaType alpha = alpha_ptr[alpha_idx + 0];  // channel 0 of mask
         out_ptr[out_idx + 3] = static_cast<uchar>(round(alpha * 255.0f));
       }
     }
+    std::cout<<std::endl;
   }
   return absl::OkStatus();
 }
@@ -233,6 +239,7 @@ absl::Status SetAlphaCalculator::Open(CalculatorContext* cc) {
 }
 
 absl::Status SetAlphaCalculator::Process(CalculatorContext* cc) {
+  LOG(INFO) << "SetAlphaCalculator::Process";
   if (use_gpu_) {
 #if !MEDIAPIPE_DISABLE_GPU
     MP_RETURN_IF_ERROR(gpu_helper_.RunInGlContext([this, cc]() -> absl::Status {

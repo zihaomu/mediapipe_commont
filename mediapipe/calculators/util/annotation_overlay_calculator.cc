@@ -27,6 +27,7 @@
 #include "mediapipe/framework/formats/video_stream_header.h"
 #include "mediapipe/framework/port/opencv_core_inc.h"
 #include "mediapipe/framework/port/opencv_imgproc_inc.h"
+#include "mediapipe/framework/port/opencv_imgcodecs_inc.h"
 #include "mediapipe/framework/port/status.h"
 #include "mediapipe/framework/port/vector.h"
 #include "mediapipe/util/annotation_renderer.h"
@@ -395,6 +396,7 @@ absl::Status AnnotationOverlayCalculator::Process(CalculatorContext* cc) {
   } else {
     // Copy the rendered image to output.
     uchar* image_mat_ptr = image_mat->data;
+    cv::imwrite("/Users/mzh/work/data/mask.jpg", *image_mat);
     MP_RETURN_IF_ERROR(RenderToCpu(cc, target_format, image_mat_ptr));
   }
 

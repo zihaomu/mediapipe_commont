@@ -43,6 +43,7 @@ cc_library(
         "//mediapipe/framework/formats:tensor",
         "//mediapipe/framework/port:opencv_core",
         "//mediapipe/framework/port:opencv_imgproc",
+        "//mediapipe/framework/port:opencv_imgcodecs",
         "//mediapipe/framework/port:status",
         "//mediapipe/tasks/cc/vision/image_segmenter/proto:segmenter_options_cc_proto",
         "//mediapipe/tasks/cc/vision/utils:image_utils",
